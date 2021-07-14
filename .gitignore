@@ -1,3 +1,6 @@
+# Data
+/data/inputs
+
 # History files
 .Rhistory
 .Rapp.history
@@ -38,19 +41,19 @@ rsconnect/
 
 # Other files
 
-src/R/conf/*test.csv
-src/R/conf/*test.xlsx
-src/R/process/*.csv
-src/R/inputs/*.csv
-src/R/inputs/*.xlsx
-src/R/inputs/*.xls
-src/R/analysis/
-src/R/interdependence/
-src/R/demand/
-.metadata
-/src/Java/counts/crop_counts/*.classpath
-/src/Java/counts/crop_counts/*.project
-.settings
+#src/R/conf/*test.csv
+#src/R/conf/*test.xlsx
+#src/R/process/*.csv
+#src/R/inputs/*.csv
+#src/R/inputs/*.xlsx
+#src/R/inputs/*.xls
+#src/R/analysis/
+#src/R/interdependence/
+#src/R/demand/
+#.metadata
+#/src/Java/counts/crop_counts/*.classpath
+#/src/Java/counts/crop_counts/*.project
+#.settings
 
 
 src/Python/Spider/.ipynb_checkpoints/

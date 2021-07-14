@@ -1,0 +1,1 @@
+docker run -it --rm -v D:/CIAT/Code/CWR/itpgrfa_crop_indicator_code/:/indicator/ stevensotelo/itpgrfa_indicator:latest /bin/bash
