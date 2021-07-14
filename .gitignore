@@ -1,6 +1,18 @@
 # Data
 /data/inputs
 
+# Python
+*/__pycache__
+*.__pycache__
+*.pyc
+
+# Jupyter
+/src/risk_calculator/.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+
+
+
 # History files
 .Rhistory
 .Rapp.history
