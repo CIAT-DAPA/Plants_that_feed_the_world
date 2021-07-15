@@ -38,8 +38,9 @@ def download_url(url, path, force = False):
         mf.mkdir(final_path)
         with zipfile.ZipFile(full_path,"r") as zip_ref:
             zip_ref.extractall(final_path)
-    
-        return True
+
+        return full_path
+        
     else:
-        print("\tNot Downloaded: " + url)
-        return False
+        print("\tFile exists, not downloaded: " + url)
+        return final_path
