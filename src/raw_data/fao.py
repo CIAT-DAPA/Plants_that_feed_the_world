@@ -16,20 +16,21 @@ def create_workspace(path):
 # (string) path: Location where the files should be saved
 # (string) step: prefix of the output files
 def create_merge_countries(countries,files,path,step="01",force=False):    
-    final_path = os.path.join(path,"fao",step)
-    #mf.mkdir(os.path.join(path,step))
+    final_path = os.path.join(path,"fao",step)    
     mf.mkdir(final_path)
+    # Loop for all faostat files which where downloaded
     for f in files:
         f_name = f.rsplit(os.path.sep, 1)[-1]
         full_name = os.path.join(f,f_name + ".csv")
-        
+        # It checks if files should be force to process again
         if force or not os.path.exists(full_name):
+            # Merge countries
             print("\tWorking with: " + full_name)
             df = pd.read_csv(full_name, encoding = "ISO-8859-1")
             df_merged = pd.merge(countries,df,how="inner",left_on="name",right_on="Area")
-            df_not_merged = df.loc[~df["Area"].isin(countries["name"]) ,:]
-            
+            df_not_merged = df.loc[~df["Area"].isin(countries["name"]) ,:]            
             print("\tFile loaded. Original: " + str(df.shape[0]) + " Merged: " + str(df_merged.shape[0]) + " Not merged: " + str(df_not_merged.shape[0]))
+            # Save outputs
             df_merged.to_csv(os.path.join(final_path,"OK-" + f_name + ".csv"), index = False, encoding = "ISO-8859-1")
             df_not_merged.to_csv(os.path.join(final_path,"ER-" + f_name + ".csv"), index = False, encoding = "ISO-8859-1")
         
@@ -43,7 +44,6 @@ def create_merge_countries(countries,files,path,step="01",force=False):
         df = pd.read_csv(f, encoding = "ISO-8859-1")
         c_missing.extend(df["Area"].drop_duplicates())
     
-    #df_missing = df_missing.drop_duplicates()    
     c_missing = list(set(c_missing))
     df_missing = pd.DataFrame({'Area':c_missing})
     df_missing.to_csv(os.path.join(final_path,"SM-WrongCountries.csv"), index = False, encoding = "ISO-8859-1")
