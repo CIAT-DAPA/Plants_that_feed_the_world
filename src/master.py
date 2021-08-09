@@ -40,14 +40,19 @@ conf_downloads = conf_xls.parse("downloads")
 conf_metrics = conf_xls.parse("metrics")
 conf_general = conf_xls.parse("general")
 
+print("Loading countries")
 countries_xls = pd.ExcelFile(os.path.join(conf_folder,"countries.xlsx"))
 countries_list = countries_xls.parse("countries")
-#crops = pd.read_csv(os.path.join(conf_folder, "crops.csv"), encoding = "UTF-8")
+
+print("Loading crops")
+crops_xls = pd.ExcelFile(os.path.join(conf_folder,"crops.xlsx"))
+crops_list = crops_xls.parse("crops")
 
 # Extracting global parameters
 print("Extracting global parameters")
 fao_encoding = conf_general.loc[conf_general["variable"] == "fao_encoding","value"][0]
 print("FAO encoding: " + fao_encoding)
+
 ##############################################
 # 03 - Downloading data from sources
 ##############################################
@@ -66,5 +71,9 @@ print("04 - Processing downloaded data")
 # Processing fao data
 fao_downloaded_files = conf_downloads.loc[conf_downloads["database"] == "fao","output"]
 fao.create_workspace(inputs_f_raw)
-fao.merge_countries(countries_list, fao_downloaded_files, inputs_f_raw, encoding=fao_encoding, force=True)
+print("Merging countries")
+fao.merge_countries(countries_list, fao_downloaded_files, inputs_f_raw, encoding=fao_encoding)
+print("Merging crops")
+inputs_f_raw_for_crops = os.path.join(inputs_f_raw,"fao","01")
+fao.merge_crops(crops_xls, inputs_f_raw_for_crops, inputs_f_raw, encoding=fao_encoding, force=True)
 #import raw_data.fao as fao
