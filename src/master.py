@@ -51,6 +51,7 @@ crops_list = crops_xls.parse("crops")
 # Extracting global parameters
 print("Extracting global parameters")
 fao_encoding = conf_general.loc[conf_general["variable"] == "fao_encoding","value"][0]
+fao_production = conf_general.loc[conf_general["variable"] == "fao_production","value"][0]
 print("FAO encoding: " + fao_encoding)
 
 ##############################################
@@ -74,6 +75,10 @@ fao.create_workspace(inputs_f_raw)
 print("Merging countries")
 fao.merge_countries(countries_list, fao_downloaded_files, inputs_f_raw, encoding=fao_encoding)
 print("Merging crops")
-inputs_f_raw_for_crops = os.path.join(inputs_f_raw,"fao","01")
-fao.merge_crops(crops_xls, inputs_f_raw_for_crops, inputs_f_raw, encoding=fao_encoding, force=True)
+fao.item_cleaned(crops_xls, os.path.join(inputs_f_raw,"fao","01"), inputs_f_raw, encoding=fao_encoding)
+print("Summarizing items")
+fao.sum_items(crops_xls, os.path.join(inputs_f_raw,"fao","02"), inputs_f_raw, [2015,2016,2017,2018], encoding=fao_encoding)
+#print("Calculating groups for commodities")
 #import raw_data.fao as fao
+#fao.calculate_commodities(crops_xls, inputs_f_raw, encoding=fao_encoding)
+
