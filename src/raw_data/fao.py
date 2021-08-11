@@ -39,6 +39,7 @@ def merge_tables(path_step,name,left,right,left_on,right_on,how="inner", encodin
     df_merged.to_csv(os.path.join(path_step,"OK",name), index = False, encoding = encoding)
     df_not_merged.to_csv(os.path.join(path_step,"ER",name), index = False, encoding = encoding)
     print("\t\tOutputs saved.")
+    return df_merged
 
 # Method which creates a summary of errors found in a step
 # (string) path_step: Root path of the step where outputs should be saved
@@ -175,34 +176,59 @@ def sum_items(conf_crops,location,path,years,step="03",encoding="ISO-8859-1",for
         else:
             print("\tNot processed: " + full_name)
 
-def calculate_commodities(conf_crops,path,step="04",encoding="ISO-8859-1",force=False):    
-    print("\tLoading items cleaned list and crops")
-    crops = conf_crops.parse("crops")
-    item_cleaned = conf_crops.parse("fao")
+
+# Method which creates files for commodities.
+# This files are needed in terms to define a factor of values
+# for 
+def calculate_commodities(conf_crops,location,path,years,prod_file,prod_field,step="04",encoding="ISO-8859-1",force=False):        
     final_path = os.path.join(path,"fao",step)    
-    create_review_folders(final_path, ok=False, er=False)
+    create_review_folders(final_path)
+    # Check if process should be execute
+    if force or not os.path.exists(os.path.join(final_path,"SM","commodities.csv")):
+        print("\tLoading items cleaned list and crops")
+        crops = conf_crops.parse("crops")
+        item_cleaned = conf_crops.parse("fao")
+        fao_groups = conf_crops.parse("fao_groups")
+        # Extracting groups and commodities
+        df_commodities = item_cleaned.loc[(item_cleaned["Item_cleaned"].str.contains(" nes", flags=re.IGNORECASE))  
+                                #| (item_cleaned["Item_cleaned"].str.contains(" other", flags=re.IGNORECASE))) & 
+                                & (item_cleaned["useable"] == "Y"),:]
+        # Setting which is the group
+        df_commodities["nes"] = df_commodities["Item_cleaned"].apply(lambda x: 1 if x.lower().endswith(" nes") else 0)
+        #df_commodities["other"] = df_commodities["Item_cleaned"].apply(lambda x: 1 if x.lower().endswith(" other") else 0)
+        # Extracting the files 
+        files = df_commodities["source"].drop_duplicates()    
+        # Keep just the item cleaned and create columns for each file
+        df_commodities = df_commodities[["Item_cleaned","nes"]].drop_duplicates(subset=['Item_cleaned'], keep='last')
+        df_commodities = pd.concat([df_commodities,pd.DataFrame(columns=files)])
+        # Loop to search how many crops contain each subgroup (nes)
+        for f in files:
+            print("\tSearching: ", f)        
+            df_commodities[f] = df_commodities["Item_cleaned"].apply(lambda x: crops.loc[crops[f].str.contains(x, na=False),:].shape[0])
+        print("\tSaving commodities")
+        df_commodities.to_csv(os.path.join(final_path,"SM", "nes.csv"), index = False, encoding = encoding)
 
-    # Extracting groups and commodities
-    df_nes_others = item_cleaned.loc[((item_cleaned["Item_cleaned"].str.contains(" nes", flags=re.IGNORECASE)) | 
-                                    (item_cleaned["Item_cleaned"].str.contains(" other", flags=re.IGNORECASE))) & 
-                                    (item_cleaned["useable"] == "Y"),:]
-    # Setting which is the group
-    df_nes_others["nes"] = df_nes_others["Item_cleaned"].apply(lambda x: 1 if x.lower().endswith(" nes") else 0)
-    df_nes_others["other"] = df_nes_others["Item_cleaned"].apply(lambda x: 1 if x.lower().endswith(" other") else 0)
-    # Extracting the files 
-    files = df_nes_others["source"].drop_duplicates()    
-    # Keep just the item cleaned and create columns for each file
-    df_nes_others = df_nes_others[["Item_cleaned","nes","other"]].drop_duplicates(subset=['Item_cleaned'], keep='last')
-    df_nes_others = pd.concat([df_nes_others,pd.DataFrame(columns=files)])
-    for f in files:
-        print("\tSearching: ", f)        
-        df_nes_others[f] = df_nes_others["Item_cleaned"].apply(lambda x: crops.loc[crops[f].str.contains(x, na=False),:].shape[0])
-
-    df_nes_others.to_csv(os.path.join(final_path,"SM", "commodities.csv"), index = False, encoding = encoding)
-    
-
-    
-    
-
-
-    
+        # Reading production
+        full_prod = os.path.join(location,"OK",prod_file + ".csv")
+        print("\tReading: ", full_prod)
+        df_prod = pd.read_csv(full_prod, encoding = encoding)
+        # Merging with fao groups
+        df_prod = merge_tables(final_path,prod_file + ".csv",df_prod,fao_groups,"Item_cleaned","Item_cleaned", encoding=encoding)
+        # Calculating total for all years
+        y_years = ["Y" + str(x) for x in years]
+        df_prod[prod_field] = df_prod[y_years].sum(axis=1)
+        # Filtering just by countries and production
+        df_prod = df_prod.loc[(df_prod["iso2"] != "") & (df_prod["Element"] != prod_field)]
+        # Sum rows by items
+        df_prod = df_prod[["group","Item_cleaned",prod_field]]        
+        df_prod = df_prod.groupby(["group","Item_cleaned"], as_index=False)[[prod_field]].sum()
+        # Calculating total for group
+        df_group = df_prod.groupby(["group"], as_index=False)[[prod_field]].sum()
+        df_group.columns = ["group","total"]
+        df_merged = pd.merge(df_prod,df_group,how="inner",left_on="group",right_on="group")
+        df_merged = pd.merge(df_merged,df_commodities[["Item_cleaned","nes",prod_file]],how="left",left_on="Item_cleaned",right_on="Item_cleaned")
+        df_merged["partial"] = df_merged[prod_field] / df_merged["total"]
+        df_merged["percentage"] = df_merged.apply(lambda x: x["partial"] if pd.isnull(x['nes']) or x["nes"] == 0 else x["partial"] / x[prod_file],axis=1)
+        df_merged.to_csv(os.path.join(final_path,"SM", "commodities.csv"), index = False, encoding = encoding)
+    else:
+        print("\tNot processed: Commodities weren't calculated")
