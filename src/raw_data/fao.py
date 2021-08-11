@@ -179,7 +179,20 @@ def sum_items(conf_crops,location,path,years,step="03",encoding="ISO-8859-1",for
 
 # Method which creates files for commodities.
 # This files are needed in terms to define a factor of values
-# for 
+# for setting weights for specif crops
+# (XLSParse) conf_crops: XLS Parse object which has the list of the crops
+# (string) location: String with the path of where the system should take the files.
+#                   It will filter all csv files from the path.
+#                   The files should have the country fixed.
+#                   It just will process the OK files
+# (string) path: Location where the files should be saved
+# (int[]) years: Array of ints with the years which will sum
+# (string) prod_file: Name of the production file. It shouldn't have the extension.
+# (string) prod_field: Name of the element which the system should calculate weights. For example Production or Yield
+# (string) step: prefix of the output files. By default it is 04
+# (string) encoding: Encoding files. By default it is ISO-8859-1
+# (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+#               By default it is False
 def calculate_commodities(conf_crops,location,path,years,prod_file,prod_field,step="04",encoding="ISO-8859-1",force=False):        
     final_path = os.path.join(path,"fao",step)    
     create_review_folders(final_path)
