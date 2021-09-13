@@ -97,7 +97,7 @@ def merge_countries(countries,files,path,step="01",encoding="ISO-8859-1",force=F
             # Merge countries
             print("\tWorking with: " + full_name)
             df = pd.read_csv(full_name, encoding = encoding)
-            merge_tables(final_path,f_name + ".csv",countries,df,"name","Area", encoding=encoding)        
+            merge_tables(final_path,f_name + ".csv",countries,df,"country","Area", encoding=encoding)        
         else:
             print("\tNot processed: " + full_name)
     
@@ -138,9 +138,45 @@ def item_cleaned(conf_crops,location,path,step="02",encoding="ISO-8859-1",force=
     print("\tCreating summary with Wrong crops")
     summary_errors(final_path,"WrongCrops.csv","Item",add_file=True,encoding=encoding)
 
+# Method that merge files with the list of crops.
+# It search by each file the item cleaned for getting the crop name
+# (XLSParse) conf_crops: XLS Parse object which has the list of the crops
+# (string) location: String with the path of where the system should take the files.
+#                   It will filter all csv files from the path.
+#                   The files should have the country fixed.
+#                   It just will process the OK files
+# (string) path: Location where the files should be saved
+# (string) step: prefix of the output files. By default it is 04
+# (string) encoding: Encoding files. By default it is ISO-8859-1
+# (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+#               By default it is False
+def merge_crops(conf_crops,location,path,step="03",encoding="ISO-8859-1",force=False):        
+    final_path = os.path.join(path,"fao",step)
+    create_review_folders(final_path)
+    crops = conf_crops.parse("crops")
+    # Get
+    files = glob.glob(os.path.join(location,'OK',"*.csv"))
+    # Loop for all faostat files which where downloaded
+    for full_name in files:
+        f_name = full_name.rsplit(os.path.sep, 1)[-1]
+        f_name = os.path.splitext(f_name)[0]
+        # It checks if files should be force to process again or if the path exist
+        if force or not os.path.exists(os.path.join(final_path,"OK",f_name + ".csv")):
+            # Merge crops
+            print("\tWorking with: " + full_name)            
+            df = pd.read_csv(full_name, encoding = encoding)            
+            crops_tmp = crops[["crop",f_name]]
+            merge_tables(final_path,f_name + ".csv",crops_tmp,df,f_name,"Item_cleaned", encoding=encoding)        
+        else:
+            print("\tNot processed: " + full_name)
+    
+    print("\tCreating summary with Wrong Crops")
+    summary_errors(final_path,"WrongCrops.csv","Item_cleaned",encoding=encoding)
+
 # Method which sum all items by area and element.
 # The values are sum throught years.
-# The field key to sum values is Item_cleaned
+# The field key to sum values is Item_cleaned.
+# It filters records with items useable
 # (XLSParse) conf_crops: XLS Parse object which has the list of the crops
 # (string) location: String with the path of where the system should take the files.
 #                   It will filter all csv files from the path.
@@ -152,7 +188,7 @@ def item_cleaned(conf_crops,location,path,step="02",encoding="ISO-8859-1",force=
 # (string) encoding: Encoding files. By default it is ISO-8859-1
 # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
 #               By default it is False
-def sum_items(conf_crops,location,path,years,step="03",encoding="ISO-8859-1",force=False):    
+def sum_items(conf_crops,location,path,years,step="04",encoding="ISO-8859-1",force=False):    
     print("\tLoading items cleaned list and crops")    
     item_cleaned = conf_crops.parse("fao")
     final_path = os.path.join(path,"fao",step)    
@@ -171,7 +207,9 @@ def sum_items(conf_crops,location,path,years,step="03",encoding="ISO-8859-1",for
             # Filtering items useable
             df = df[df["useable"]=="Y"]
             # Grouping by Item cleaned, country and element
-            df = df.groupby(["Item_cleaned","name","iso2","Element Code","Element"], as_index=False)[y_years].sum()            
+            countries = df[["country","iso2"]].drop_duplicates()
+            df = df.groupby(["crop","Item_cleaned","country","Element Code","Element"], as_index=False)[y_years].sum()
+            df = pd.merge(countries,df,how='inner', on='country')
             df.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)
         else:
             print("\tNot processed: " + full_name)
@@ -179,7 +217,8 @@ def sum_items(conf_crops,location,path,years,step="03",encoding="ISO-8859-1",for
 
 # Method which creates files for commodities.
 # This files are needed in terms to define a factor of values
-# for setting weights for specif crops
+# for setting weights for specif crops. 
+# The main output is the file commodities which is in folder SM
 # (XLSParse) conf_crops: XLS Parse object which has the list of the crops
 # (string) location: String with the path of where the system should take the files.
 #                   It will filter all csv files from the path.
@@ -193,11 +232,12 @@ def sum_items(conf_crops,location,path,years,step="03",encoding="ISO-8859-1",for
 # (string) encoding: Encoding files. By default it is ISO-8859-1
 # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
 #               By default it is False
-def calculate_commodities(conf_crops,location,path,years,prod_file,prod_field,step="04",encoding="ISO-8859-1",force=False):        
+def calculate_commodities(conf_crops,location,path,years,prod_file,prod_field,step="05",encoding="ISO-8859-1",force=False):    
     final_path = os.path.join(path,"fao",step)    
     create_review_folders(final_path)
+    path_commodities = os.path.join(final_path,"SM","commodities.csv")
     # Check if process should be execute
-    if force or not os.path.exists(os.path.join(final_path,"SM","commodities.csv")):
+    if force or not os.path.exists(path_commodities):
         print("\tLoading items cleaned list and crops")
         crops = conf_crops.parse("crops")
         item_cleaned = conf_crops.parse("fao")
@@ -233,8 +273,8 @@ def calculate_commodities(conf_crops,location,path,years,prod_file,prod_field,st
         # Filtering just by countries and production
         df_prod = df_prod.loc[(df_prod["iso2"] != "") & (df_prod["Element"] != prod_field)]
         # Sum rows by items
-        df_prod = df_prod[["group","Item_cleaned",prod_field]]        
-        df_prod = df_prod.groupby(["group","Item_cleaned"], as_index=False)[[prod_field]].sum()
+        df_prod = df_prod[["group","Item_cleaned","crop",prod_field]]        
+        df_prod = df_prod.groupby(["group","Item_cleaned","crop"], as_index=False)[[prod_field]].sum()
         # Calculating total for group
         df_group = df_prod.groupby(["group"], as_index=False)[[prod_field]].sum()
         df_group.columns = ["group","total"]
@@ -242,6 +282,65 @@ def calculate_commodities(conf_crops,location,path,years,prod_file,prod_field,st
         df_merged = pd.merge(df_merged,df_commodities[["Item_cleaned","nes",prod_file]],how="left",left_on="Item_cleaned",right_on="Item_cleaned")
         df_merged["partial"] = df_merged[prod_field] / df_merged["total"]
         df_merged["percentage"] = df_merged.apply(lambda x: x["partial"] if pd.isnull(x['nes']) or x["nes"] == 0 else x["partial"] / x[prod_file],axis=1)
-        df_merged.to_csv(os.path.join(final_path,"SM", "commodities.csv"), index = False, encoding = encoding)
+        df_merged.to_csv(path_commodities, index = False, encoding = encoding)
     else:
         print("\tNot processed: Commodities weren't calculated")
+    
+    return path_commodities
+
+# Method that calculates the final values for all variables.
+# It merges files with the commodities files, in terms to get the percentage that each crop contribute. 
+# If a crop is not a commodities, the value will be the original
+# (string) location: String with the path of where the system should take the files.
+#                   It will filter all csv files from the path.
+#                   The files should have the country fixed.
+#                   It just will process the OK files
+# (string) path: Location where the files should be saved
+# (int[]) years: Array of ints with the years which will sum
+# (string[]) special_files: List of files.
+# (commodities_file) path_commodities: Location where the commodities with the percentage is stored
+# (string) step: prefix of the output files. By default it is 04
+# (string) encoding: Encoding files. By default it is ISO-8859-1
+# (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+#               By default it is False
+def calculate_values(location,path,years,special_files,commodities_file,step="06",encoding="ISO-8859-1",force=False):        
+    final_path = os.path.join(path,"fao",step)
+    create_review_folders(final_path,er=False,sm=False)
+    # Get files to process
+    files = glob.glob(os.path.join(location,'OK',"*.csv"))
+    # Load commodities
+    commodities = pd.read_csv(commodities_file, encoding = encoding) 
+    commodities = commodities[["Item_cleaned","percentage","nes","group","crop"]]
+    # Create a list of years
+    y_years = ["Y" + str(x) for x in years]
+    # Loop for all faostat files which where downloaded
+    for full_name in files:
+        f_name = full_name.rsplit(os.path.sep, 1)[-1]
+        f_name = os.path.splitext(f_name)[0]
+        # It checks if files should be force to process again or if the path exist
+        if force or not os.path.exists(os.path.join(final_path,"OK",f_name + ".csv")):
+            # Merge with commodities
+            print("\tWorking with: " + full_name)            
+            df = pd.read_csv(full_name, encoding = encoding)                                                
+            # It is a condition for Production file, in this case we just change the values
+            # for big groups i.e. (Cereals, nes) but not for small groups i.e (almonds)            
+            if f_name not in special_files:
+                df = pd.merge(commodities,df,how='right',on=["Item_cleaned","crop"])
+                df.loc[df["nes"].isna(),"percentage"]=1
+            else:
+                df = pd.merge(commodities,df,how='right',left_on=["group","crop"],right_on=["Item_cleaned","crop"])
+                            
+            # If item cleaned is not a group, so the percentage will be null
+            # we should set 1 to all crops which are not a group
+            df.loc[df["percentage"].isna(),"percentage"]=1
+
+            # Calculating final values for years
+            print("\tCalculating final values for years ", y_years)
+            for y in y_years:
+                df[y + "_new"] = df["percentage"]*df[y]
+            # Saving outputs
+            df.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)            
+        else:
+            print("\tNot processed: " + full_name)
+
+

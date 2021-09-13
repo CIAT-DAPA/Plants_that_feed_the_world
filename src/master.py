@@ -52,7 +52,9 @@ crops_list = crops_xls.parse("crops")
 print("Extracting global parameters")
 fao_encoding = conf_general.loc[conf_general["variable"] == "fao_encoding","value"].values[0]
 fao_production = conf_general.loc[conf_general["variable"] == "fao_production","value"].values[0]
+fao_special_files = conf_general.loc[conf_general["variable"] == "fao_special_files","value"].values[0].split(",")
 fao_production_field = conf_general.loc[conf_general["variable"] == "fao_production_field","value"].values[0]
+fao_years = [2015,2016,2017,2018]
 print("FAO encoding: " + fao_encoding)
 print("FAO production: " + fao_production)
 print("FAO production field: " + fao_production_field)
@@ -74,14 +76,21 @@ print("04 - Processing downloaded data")
 
 # Processing fao data
 fao_downloaded_files = conf_downloads.loc[conf_downloads["database"] == "fao","output"]
+# Remove Population File
+fao_downloaded_files = [file for file in fao_downloaded_files if "Population" not in file]
+# Process other files
 fao.create_workspace(inputs_f_raw)
 print("Merging countries")
 fao.merge_countries(countries_list, fao_downloaded_files, inputs_f_raw, encoding=fao_encoding)
-print("Merging crops")
+print("Merging items cleaned")
 fao.item_cleaned(crops_xls, os.path.join(inputs_f_raw,"fao","01"), inputs_f_raw, encoding=fao_encoding)
+print("Merging with crops")
+fao.merge_crops(crops_xls,os.path.join(inputs_f_raw,"fao","02"),inputs_f_raw,encoding=fao_encoding)
 print("Summarizing items")
-fao.sum_items(crops_xls, os.path.join(inputs_f_raw,"fao","02"), inputs_f_raw, [2015,2016,2017,2018], encoding=fao_encoding)
+fao.sum_items(crops_xls, os.path.join(inputs_f_raw,"fao","03"), inputs_f_raw, fao_years, encoding=fao_encoding)
 print("Calculating groups for commodities")
-fao.calculate_commodities(crops_xls, os.path.join(inputs_f_raw,"fao","03"), inputs_f_raw, [2015,2016,2017,2018], 
+fao_f_commodities = fao.calculate_commodities(crops_xls, os.path.join(inputs_f_raw,"fao","04"), inputs_f_raw, fao_years, 
                             fao_production, fao_production_field, encoding=fao_encoding)
-
+print("Calculating values for the years")
+fao.calculate_values(os.path.join(inputs_f_raw,"fao","04"), inputs_f_raw, fao_years, fao_special_files, 
+                    fao_f_commodities, encoding=fao_encoding)
