@@ -94,3 +94,6 @@ fao_f_commodities = fao.calculate_commodities(crops_xls, os.path.join(inputs_f_r
 print("Calculating values for the years")
 fao.calculate_values(os.path.join(inputs_f_raw,"fao","04"), inputs_f_raw, fao_years, fao_special_files, 
                     fao_f_commodities, encoding=fao_encoding)
+
+print("Calculating crops contribution by country")
+fao.calculate_contribution_crop_country(os.path.join(inputs_f_raw,"fao","06"), inputs_f_raw, fao_years, encoding=fao_encoding)
