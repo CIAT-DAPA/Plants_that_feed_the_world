@@ -272,15 +272,15 @@ def calculate_commodities(conf_crops,location,path,years,prod_file,prod_field,st
         df_prod[prod_field] = df_prod[y_years].sum(axis=1)
         # Filtering just by World and Production
         df_prod = df_prod.loc[(df_prod["country"] == "World") & (df_prod["Element"] == prod_field)]
-        df_prod.to_csv(os.path.join(final_path,"SM","1-prod_filter.csv"), index = False, encoding = encoding)
+        #df_prod.to_csv(os.path.join(final_path,"SM","1-prod_filter.csv"), index = False, encoding = encoding)
         # Sum rows by items
         df_prod = df_prod[["group","Item_cleaned","crop",prod_field]]        
         df_prod = df_prod.groupby(["group","Item_cleaned","crop"], as_index=False)[[prod_field]].sum()
-        df_prod.to_csv(os.path.join(final_path,"SM","2-grouped by group item crop.csv"), index = False, encoding = encoding)
+        #df_prod.to_csv(os.path.join(final_path,"SM","2-grouped by group item crop.csv"), index = False, encoding = encoding)
         # Calculating total for group
         df_group = df_prod.groupby(["group"], as_index=False)[[prod_field]].sum()
         df_group.columns = ["group","total"]
-        df_prod.to_csv(os.path.join(final_path,"SM","3-grouped.csv"), index = False, encoding = encoding)
+        #df_prod.to_csv(os.path.join(final_path,"SM","3-grouped.csv"), index = False, encoding = encoding)
         df_merged = pd.merge(df_prod,df_group,how="inner",left_on="group",right_on="group")
         df_merged = pd.merge(df_merged,df_commodities[["Item_cleaned","nes",prod_file]],how="left",left_on="Item_cleaned",right_on="Item_cleaned")
         df_merged["partial"] = df_merged[prod_field] / df_merged["total"]
@@ -389,9 +389,7 @@ def calculate_contribution_crop_country(location,path,years,step="07",encoding="
                 df[y + "_contrib"] = df[y+"_y"] / df[y+"_x"]
                 df = df.sort_values(by=["country","Element", y+ "_contrib"], ascending=False)
                 df[y + "_cumsum"] = df.groupby(["country","Element"])[[y + "_contrib"]].cumsum()
-            #y_years = []
-            #df = df[["crop","country","Element Code","Element"]]
-            # 
+            
             # Saving outputs
             print("\tSaving output")
             df.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)            
