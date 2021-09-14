@@ -277,14 +277,19 @@ def calculate_commodities(conf_crops,location,path,years,prod_file,prod_field,st
         df_prod = df_prod[["group","Item_cleaned","crop",prod_field]]        
         df_prod = df_prod.groupby(["group","Item_cleaned","crop"], as_index=False)[[prod_field]].sum()
         #df_prod.to_csv(os.path.join(final_path,"SM","2-grouped by group item crop.csv"), index = False, encoding = encoding)
+        # Merge with commodities and set normal value
+        df_prod = pd.merge(df_prod,df_commodities[["Item_cleaned","nes",prod_file]],how="left",on="Item_cleaned")
+        df_prod[prod_field] = df_prod.apply(lambda x: x[prod_field] if pd.isnull(x['nes']) or x["nes"] == 0 else x[prod_field] / x[prod_file],axis=1)
+        #df_prod.to_csv(os.path.join(final_path,"SM","2.5-grouped.csv"), index = False, encoding = encoding)
         # Calculating total for group
         df_group = df_prod.groupby(["group"], as_index=False)[[prod_field]].sum()
         df_group.columns = ["group","total"]
         #df_prod.to_csv(os.path.join(final_path,"SM","3-grouped.csv"), index = False, encoding = encoding)
         df_merged = pd.merge(df_prod,df_group,how="inner",left_on="group",right_on="group")
-        df_merged = pd.merge(df_merged,df_commodities[["Item_cleaned","nes",prod_file]],how="left",left_on="Item_cleaned",right_on="Item_cleaned")
+        #df_merged = pd.merge(df_merged,df_commodities[["Item_cleaned","nes",prod_file]],how="left",left_on="Item_cleaned",right_on="Item_cleaned")
         df_merged["partial"] = df_merged[prod_field] / df_merged["total"]
-        df_merged["percentage"] = df_merged.apply(lambda x: x["partial"] if pd.isnull(x['nes']) or x["nes"] == 0 else x["partial"] / x[prod_file],axis=1)
+        df_merged["percentage"] = df_merged["partial"]
+        #df_merged["percentage"] = df_merged.apply(lambda x: x["partial"] if pd.isnull(x['nes']) or x["nes"] == 0 else x["partial"] / x[prod_file],axis=1)
         df_merged.to_csv(path_commodities, index = False, encoding = encoding)
     else:
         print("\tNot processed: Commodities weren't calculated")
