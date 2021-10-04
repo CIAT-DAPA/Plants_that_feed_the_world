@@ -1,6 +1,8 @@
 import os
 import re
 import glob
+
+from pandas.core import groupby
 import numpy as np
 import pandas as pd
 
@@ -376,7 +378,7 @@ def calculate_contribution_crop_country(location,path,years,step="07",encoding="
         f_name = os.path.splitext(f_name)[0]
         # It checks if files should be force to process again or if the path exist
         if force or not os.path.exists(os.path.join(final_path,"OK",f_name + ".csv")):
-            # Merge with commodities
+            # Getting from source
             print("\tWorking with: " + full_name)            
             df = pd.read_csv(full_name, encoding = encoding)
             # Filtering just data for countries
@@ -385,7 +387,6 @@ def calculate_contribution_crop_country(location,path,years,step="07",encoding="
             # Summarizing by country, element
             print("\tSummarizing by country and element")
             total = df.groupby(["country","Element Code","Element"], as_index=False)[y_years].sum()
-            #print(total.head())
             print("\tMerging with file")
             df = pd.merge(total,df,how='inner',on=["country","Element Code","Element"])
             print("\tLooping for calculating contribution by year")
@@ -397,7 +398,51 @@ def calculate_contribution_crop_country(location,path,years,step="07",encoding="
             
             # Saving outputs
             print("\tSaving output")
-            df.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)            
-            #total.to_csv(os.path.join(final_path,"OK",f_name + "_total.csv"), index = False, encoding = encoding)
+            df.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)
         else:
             print("\tNot processed: " + full_name)
+
+# Method that counts how many countries have crops.
+# (string) location: String with the path of where the system should take the files.
+#                   It will filter all csv files from the path.
+#                   The files should have the country fixed.
+#                   It just will process the OK files
+# (string) path: Location where the files should be saved
+# (int[]) years: Array of ints with the years which will sum
+# (double) limit: limit which establishes the importance of crops. By default it is 0.95
+# (string) suffix: suffix field which has the percentage of each crop in a country
+# (string) step: prefix of the output files. By default it is 08
+# (string) encoding: Encoding files. By default it is ISO-8859-1
+# (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+#               By default it is False
+def count_countries(location,path,years,limit=0.95,suffix="_cumsum",step="08",encoding="ISO-8859-1",force=False):        
+    final_path = os.path.join(path,"fao",step)
+    create_review_folders(final_path,er=False,sm=False)
+    # Get files to process
+    files = glob.glob(os.path.join(location,'OK',"*.csv"))
+    # Create a list of years
+    y_years = ["Y" + str(x) + suffix for x in years]
+    # Loop for all faostat files which where downloaded
+    for full_name in files:
+        f_name = full_name.rsplit(os.path.sep, 1)[-1]
+        f_name = os.path.splitext(f_name)[0]
+        # It checks if files should be force to process again or if the path exist
+        if force or not os.path.exists(os.path.join(final_path,"OK",f_name + ".csv")):            
+            print("\tWorking with: " + full_name)
+            df = pd.read_csv(full_name, encoding = encoding)
+            # Getting a list of all crops into a dataframe
+            df_crops = df[["crop","Element"]].drop_duplicates()            
+            for y in years:
+                print("\t\tCounting ",y)
+                y_year = "Y" + str(y) + suffix
+                df_tmp = df.loc[df[y_year] <= limit, ["crop","Element", y_year]]
+                df_tmp = df_tmp.dropna()
+                df_tmp = df_tmp.groupby(["crop","Element"]).size().reset_index(name=str(y))
+                df_crops = pd.merge(df_crops,df_tmp,how='left',on=["crop","Element"])
+            
+            print("\tSaving output")
+            df_crops = df_crops.dropna(thresh=4)
+            df_crops = df_crops.fillna(0)
+            df_crops.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)
+        else:
+            print("\tNot processed: " + full_name)         

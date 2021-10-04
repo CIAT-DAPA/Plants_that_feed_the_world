@@ -54,6 +54,8 @@ fao_encoding = conf_general.loc[conf_general["variable"] == "fao_encoding","valu
 fao_production = conf_general.loc[conf_general["variable"] == "fao_production","value"].values[0]
 fao_special_files = conf_general.loc[conf_general["variable"] == "fao_special_files","value"].values[0].split(",")
 fao_production_field = conf_general.loc[conf_general["variable"] == "fao_production_field","value"].values[0]
+fao_countries_limit = float(conf_general.loc[conf_general["variable"] == "fao_countries_limit","value"].values[0])
+fao_countries_suffix =  conf_general.loc[conf_general["variable"] == "fao_countries_suffix","value"].values[0]
 fao_years = [2015,2016,2017,2018]
 print("FAO encoding: " + fao_encoding)
 print("FAO production: " + fao_production)
@@ -90,10 +92,12 @@ print("Summarizing items")
 fao.sum_items(crops_xls, os.path.join(inputs_f_raw,"fao","03"), inputs_f_raw, fao_years, encoding=fao_encoding)
 print("Calculating groups for commodities")
 fao_f_commodities = fao.calculate_commodities(crops_xls, os.path.join(inputs_f_raw,"fao","04"), inputs_f_raw, fao_years, 
-                            fao_production, fao_production_field, encoding=fao_encoding)
+                    fao_production, fao_production_field, encoding=fao_encoding)
 print("Calculating values for the years")
 fao.calculate_values(os.path.join(inputs_f_raw,"fao","04"), inputs_f_raw, fao_years, fao_special_files, 
                     fao_f_commodities, encoding=fao_encoding)
-
 print("Calculating crops contribution by country")
 fao.calculate_contribution_crop_country(os.path.join(inputs_f_raw,"fao","06"), inputs_f_raw, fao_years, encoding=fao_encoding)
+print("Calculating counts by country")
+fao.count_countries(os.path.join(inputs_f_raw,"fao","07"), inputs_f_raw, fao_years, fao_countries_limit, 
+                    fao_countries_suffix, encoding=fao_encoding)
