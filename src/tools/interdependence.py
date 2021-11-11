@@ -89,19 +89,23 @@ def interdependence(data,crop_regions,method,years,path,folder, pop_regions, pop
         df_outside_total = df_outside.groupby(['Element','crop'],as_index=False)[years].sum()
 
         # Merge data for origin regions and outside regiones in one dataframe
-        df_total = pd.merge(df_inside_total, df_outside_total, on=["Element","crop"], how="inner", suffixes=("_in","_out"))        
+        df_total = pd.merge(df_inside_total, df_outside_total, on=["Element","crop"], how="inner", suffixes=("_in","_out"))
         # Loop for calculating interdependence by each year
         for y in years:
+            # Getting which records have information in the origin.
+            # If crops don't have information in origin, the interdependence is not calculate
+            origin_rows = df_total[y + "_in"] > 0
             if method == "proportion":
-                df_total[y + "_world"] = (df_total[y + "_in"]*(pop_inside[y]/pop_world[y])) + (df_total[y + "_out"]*(pop_outside[y]/pop_world[y]))
+                df_total.at[origin_rows,y + "_world"] = (df_total.loc[origin_rows, y + "_in"]*(pop_inside[y]/pop_world[y])) + (df_total.loc[origin_rows, y + "_out"]*(pop_outside[y]/pop_world[y]))
             else:
-                df_total[y + "_world"] = df_total[y + "_in"] + df_total[y + "_out"]
+                df_total.at[origin_rows,y + "_world"] = df_total.loc[origin_rows,y + "_in"] + df_total.loc[origin_rows, y + "_out"]
 
+            # Calculate interdependence
             df_total[y + "_global"] = df_total[y + "_out"] / df_total[y + "_world"]
 
             # Fixing the values for proportion which can be struggle            
             df_total.at[df_total[y + "_global"] > 1,y + "_global"] = 1
-                
+
         tmp_interdependence = tmp_interdependence.append(df_total, ignore_index=True)
     
     print("\t\tSaving logs")

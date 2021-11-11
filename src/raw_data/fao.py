@@ -8,6 +8,7 @@ import pandas as pd
 
 import tools.manage_files as mf
 import tools.interdependence as id
+import tools.gini as gi
 
 # Method which creates the folders OK, ER, SM for each step
 # (string) path: Path where the folders should be create
@@ -538,4 +539,46 @@ def calculate_interdependence(conf_crops, location, path, years, special_files, 
             print("\tSaving output")
             df_inter.to_csv(final_file, index = False, encoding = encoding)
 
-    print("OK")
+"""
+# Method that calculates the interdependence
+# (XLSParse) conf_countries: XLS Parse object which has the configurations for countries
+# (string) location: String with the path of where the system should take the files.
+#                   It will filter all csv files from the path.
+#                   It just will process the OK files
+# (string) path: Location where the files should be saved
+# (int[]) years: Array of ints with the years which will be sum
+# (string[]) special_files: List of files. These files will be processed with proportion method
+# (string) population: Path where the population files are. 
+#                   It should have the three files: population by country, region and segregated
+# (string) step: prefix of the output files. By default it is 10
+# (string) encoding: Encoding files. By default it is ISO-8859-1
+# (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+#               By default it is False
+def calculate_gini(conf_crops, location, path, years, special_files, population, step="11",encoding="ISO-8859-1",force=False):
+    final_path = os.path.join(path,"fao",step)
+    create_review_folders(final_path)
+    y_years = ["Y" + str(x) for x in years]
+    region_crops = conf_crops.parse("regions")
+    
+    # Loading the population files
+    #df_population_countries = pd.read_csv(os.path.join(population,"OK","population_countries.csv"), encoding = encoding)
+    df_population_region = pd.read_csv(os.path.join(population,"SM","population_region.csv"), encoding = encoding)
+    df_population_segregated = pd.read_csv(os.path.join(population,"SM","population_segregated.csv"), encoding = encoding)
+    
+    # Get files to process
+    files = glob.glob(os.path.join(location,'OK',"*.csv"))
+    for full_name in files:
+        f_name = full_name.rsplit(os.path.sep, 1)[-1]
+        f_name = os.path.splitext(f_name)[0]
+        final_file = os.path.join(final_path,"SM",f_name + ".csv")
+        # It checks if files should be force to process again or if the path exist        
+        if force or not os.path.exists(final_file):                    
+            method = "proportion" if f_name in special_files else "sum"
+
+            print("\tWorking with:",full_name,"Method:",method)
+            df = pd.read_csv(full_name, encoding = encoding)   
+            
+            df_inter = id.interdependence(df,region_crops,method,y_years,final_path,f_name,df_population_region,df_population_segregated)
+            print("\tSaving output")
+            df_inter.to_csv(final_file, index = False, encoding = encoding)
+"""
