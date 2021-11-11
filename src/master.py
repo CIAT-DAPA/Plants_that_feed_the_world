@@ -56,6 +56,7 @@ fao_special_files = conf_general.loc[conf_general["variable"] == "fao_special_fi
 fao_production_field = conf_general.loc[conf_general["variable"] == "fao_production_field","value"].values[0]
 fao_countries_limit = float(conf_general.loc[conf_general["variable"] == "fao_countries_limit","value"].values[0])
 fao_countries_suffix =  conf_general.loc[conf_general["variable"] == "fao_countries_suffix","value"].values[0]
+fao_element_population =  conf_general.loc[conf_general["variable"] == "fao_element_population","value"].values[0]
 fao_years = [2015,2016,2017,2018]
 print("FAO encoding: " + fao_encoding)
 print("FAO production: " + fao_production)
@@ -77,9 +78,10 @@ conf_downloads["output"] = conf_downloads.apply(lambda x: dl.download_url(x.url,
 print("04 - Processing downloaded data")
 
 # Processing fao data
-fao_downloaded_files = conf_downloads.loc[conf_downloads["database"] == "fao","output"]
+fao_downloaded = conf_downloads.loc[conf_downloads["database"] == "fao","output"]
 # Remove Population File
-fao_downloaded_files = [file for file in fao_downloaded_files if "Population" not in file]
+fao_downloaded_files = [file for file in fao_downloaded if "Population" not in file]
+fao_downloaded_population = [file for file in fao_downloaded if "Population" in file]
 # Process other files
 fao.create_workspace(inputs_f_raw)
 print("Merging countries")
@@ -98,6 +100,11 @@ fao.calculate_values(os.path.join(inputs_f_raw,"fao","04"), inputs_f_raw, fao_ye
                     fao_f_commodities, encoding=fao_encoding)
 print("Calculating crops contribution by country")
 fao.calculate_contribution_crop_country(os.path.join(inputs_f_raw,"fao","06"), inputs_f_raw, fao_years, encoding=fao_encoding)
-print("Calculating counts by country")
+print("Counting by country")
 fao.count_countries(os.path.join(inputs_f_raw,"fao","07"), inputs_f_raw, fao_years, fao_countries_limit, 
                     fao_countries_suffix, encoding=fao_encoding)
+print("Calculating population")
+fao_f_population = fao.calculate_population(countries_xls, fao_downloaded_population, inputs_f_raw, fao_years,fao_element_population, 
+                    encoding=fao_encoding)
+print("Calculating interdependence")
+fao.calculate_interdependence(crops_xls,os.path.join(inputs_f_raw,"fao","06"),inputs_f_raw,fao_years,fao_special_files,fao_f_population)

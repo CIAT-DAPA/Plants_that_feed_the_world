@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 import tools.manage_files as mf
+import tools.interdependence as id
 
 # Method which creates the folders OK, ER, SM for each step
 # (string) path: Path where the folders should be create
@@ -145,7 +146,6 @@ def item_cleaned(conf_crops,location,path,step="02",encoding="ISO-8859-1",force=
 # (XLSParse) conf_crops: XLS Parse object which has the list of the crops
 # (string) location: String with the path of where the system should take the files.
 #                   It will filter all csv files from the path.
-#                   The files should have the country fixed.
 #                   It just will process the OK files
 # (string) path: Location where the files should be saved
 # (string) step: prefix of the output files. By default it is 03
@@ -182,7 +182,6 @@ def merge_crops(conf_crops,location,path,step="03",encoding="ISO-8859-1",force=F
 # (XLSParse) conf_crops: XLS Parse object which has the list of the crops
 # (string) location: String with the path of where the system should take the files.
 #                   It will filter all csv files from the path.
-#                   The files should have the country fixed.
 #                   It just will process the OK files
 # (string) path: Location where the files should be saved
 # (int[]) years: Array of ints with the years which will sum
@@ -224,10 +223,9 @@ def sum_items(conf_crops,location,path,years,step="04",encoding="ISO-8859-1",for
 # (XLSParse) conf_crops: XLS Parse object which has the list of the crops
 # (string) location: String with the path of where the system should take the files.
 #                   It will filter all csv files from the path.
-#                   The files should have the country fixed.
 #                   It just will process the OK files
 # (string) path: Location where the files should be saved
-# (int[]) years: Array of ints with the years which will sum
+# (int[]) years: Array of ints with the years which will be sum
 # (string) prod_file: Name of the production file. It shouldn't have the extension.
 # (string) prod_field: Name of the element which the system should calculate weights. For example Production or Yield
 # (string) step: prefix of the output files. By default it is 05
@@ -250,7 +248,6 @@ def calculate_commodities(conf_crops,location,path,years,prod_file,prod_field,st
                                 & (item_cleaned["useable"] == "Y"),:]
         # Setting which is the group
         df_commodities["nes"] = df_commodities["Item_cleaned"].apply(lambda x: 1 if x.lower().endswith(" nes") else 0)
-        #df_commodities["other"] = df_commodities["Item_cleaned"].apply(lambda x: 1 if x.lower().endswith(" other") else 0)
         # Extracting the files 
         files = df_commodities["source"].drop_duplicates()    
         # Keep just the item cleaned and create columns for each file
@@ -273,25 +270,23 @@ def calculate_commodities(conf_crops,location,path,years,prod_file,prod_field,st
         y_years = ["Y" + str(x) for x in years]
         df_prod[prod_field] = df_prod[y_years].sum(axis=1)
         # Filtering just by World and Production
-        df_prod = df_prod.loc[(df_prod["country"] == "World") & (df_prod["Element"] == prod_field)]
-        #df_prod.to_csv(os.path.join(final_path,"SM","1-prod_filter.csv"), index = False, encoding = encoding)
+        df_prod = df_prod.loc[(df_prod["country"] == "World") & (df_prod["Element"] == prod_field)]        
         # Sum rows by items
         df_prod = df_prod[["group","Item_cleaned","crop",prod_field]]        
         df_prod = df_prod.groupby(["group","Item_cleaned","crop"], as_index=False)[[prod_field]].sum()
-        #df_prod.to_csv(os.path.join(final_path,"SM","2-grouped by group item crop.csv"), index = False, encoding = encoding)
+        
         # Merge with commodities and set normal value
         df_prod = pd.merge(df_prod,df_commodities[["Item_cleaned","nes",prod_file]],how="left",on="Item_cleaned")
         df_prod[prod_field] = df_prod.apply(lambda x: x[prod_field] if pd.isnull(x['nes']) or x["nes"] == 0 else x[prod_field] / x[prod_file],axis=1)
-        #df_prod.to_csv(os.path.join(final_path,"SM","2.5-grouped.csv"), index = False, encoding = encoding)
+        
         # Calculating total for group
         df_group = df_prod.groupby(["group"], as_index=False)[[prod_field]].sum()
         df_group.columns = ["group","total"]
-        #df_prod.to_csv(os.path.join(final_path,"SM","3-grouped.csv"), index = False, encoding = encoding)
+        
         df_merged = pd.merge(df_prod,df_group,how="inner",left_on="group",right_on="group")
-        #df_merged = pd.merge(df_merged,df_commodities[["Item_cleaned","nes",prod_file]],how="left",left_on="Item_cleaned",right_on="Item_cleaned")
+        
         df_merged["partial"] = df_merged[prod_field] / df_merged["total"]
-        df_merged["percentage"] = df_merged["partial"]
-        #df_merged["percentage"] = df_merged.apply(lambda x: x["partial"] if pd.isnull(x['nes']) or x["nes"] == 0 else x["partial"] / x[prod_file],axis=1)
+        df_merged["percentage"] = df_merged["partial"]        
         df_merged.to_csv(path_commodities, index = False, encoding = encoding)
     else:
         print("\tNot processed: Commodities weren't calculated")
@@ -303,10 +298,9 @@ def calculate_commodities(conf_crops,location,path,years,prod_file,prod_field,st
 # If a crop is not a commodities, the value will be the original
 # (string) location: String with the path of where the system should take the files.
 #                   It will filter all csv files from the path.
-#                   The files should have the country fixed.
 #                   It just will process the OK files
 # (string) path: Location where the files should be saved
-# (int[]) years: Array of ints with the years which will sum
+# (int[]) years: Array of ints with the years which will be sum
 # (string[]) special_files: List of files.
 # (commodities_file) path_commodities: Location where the commodities with the percentage is stored
 # (string) step: prefix of the output files. By default it is 06
@@ -357,10 +351,9 @@ def calculate_values(location,path,years,special_files,commodities_file,step="06
 # Method that calculates contribution of crops in each country by element.
 # (string) location: String with the path of where the system should take the files.
 #                   It will filter all csv files from the path.
-#                   The files should have the country fixed.
 #                   It just will process the OK files
 # (string) path: Location where the files should be saved
-# (int[]) years: Array of ints with the years which will sum
+# (int[]) years: Array of ints with the years which will be sum
 # (string) step: prefix of the output files. By default it is 07
 # (string) encoding: Encoding files. By default it is ISO-8859-1
 # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
@@ -405,10 +398,9 @@ def calculate_contribution_crop_country(location,path,years,step="07",encoding="
 # Method that counts how many countries have crops.
 # (string) location: String with the path of where the system should take the files.
 #                   It will filter all csv files from the path.
-#                   The files should have the country fixed.
 #                   It just will process the OK files
 # (string) path: Location where the files should be saved
-# (int[]) years: Array of ints with the years which will sum
+# (int[]) years: Array of ints with the years which will be sum
 # (double) limit: limit which establishes the importance of crops. By default it is 0.95
 # (string) suffix: suffix field which has the percentage of each crop in a country
 # (string) step: prefix of the output files. By default it is 08
@@ -420,8 +412,6 @@ def count_countries(location,path,years,limit=0.95,suffix="_cumsum",step="08",en
     create_review_folders(final_path,er=False,sm=False)
     # Get files to process
     files = glob.glob(os.path.join(location,'OK',"*.csv"))
-    # Create a list of years
-    y_years = ["Y" + str(x) + suffix for x in years]
     # Loop for all faostat files which where downloaded
     for full_name in files:
         f_name = full_name.rsplit(os.path.sep, 1)[-1]
@@ -435,7 +425,7 @@ def count_countries(location,path,years,limit=0.95,suffix="_cumsum",step="08",en
             for y in years:
                 print("\t\tCounting ",y)
                 y_year = "Y" + str(y) + suffix
-                df_tmp = df.loc[df[y_year] <= limit, ["crop","Element", y_year]]
+                df_tmp = df.loc[df[y_year] < limit, ["crop","Element", y_year]]
                 df_tmp = df_tmp.dropna()
                 df_tmp = df_tmp.groupby(["crop","Element"]).size().reset_index(name=str(y))
                 df_crops = pd.merge(df_crops,df_tmp,how='left',on=["crop","Element"])
@@ -446,3 +436,106 @@ def count_countries(location,path,years,limit=0.95,suffix="_cumsum",step="08",en
             df_crops.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)
         else:
             print("\tNot processed: " + full_name)         
+
+# Method that calculates the amount of population for countries and regions.
+# It returns the path where the files are located.
+# The ouputs files
+# (XLSParse) conf_countries: XLS Parse object which has the configurations for countries
+# (string[]) files: Array which contains the folders locations of fao data. 
+#                   It doesn't have location of specific files, 
+#                   because it will search the file which has the same name of the folder
+# (string) path: Location where the files should be saved
+# (int[]) years: Array of ints with the years which will be sum
+# (string) element_population: Name of element which has the population values
+# (string) step: prefix of the output files. By default it is 09
+# (string) encoding: Encoding files. By default it is ISO-8859-1
+# (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+#               By default it is False
+def calculate_population(conf_countries,files,path,years,element_population,step="09",encoding="ISO-8859-1",force=False):
+    final_path = os.path.join(path,"fao",step)
+    create_review_folders(final_path)
+    y_years = ["Y" + str(x) for x in years]
+    # Get files to process
+    for f in files:
+        f_name = f.rsplit(os.path.sep, 1)[-1]
+        full_name = os.path.join(f,f_name + ".csv")
+        # It checks if files should be force to process again or if the path exist
+        if force or not os.path.exists(os.path.join(final_path,"OK","population_countries.csv")):
+            print("\tWorking with: " + full_name)
+            df = pd.read_csv(full_name, encoding = encoding)
+            # Filtering
+            print("\t\tFiltering dataset by: ", element_population)
+            df = df.loc[df["Element"] == element_population,:]
+
+            # Getting regions
+            print("\t\tMerging by country and Area")
+            regions = conf_countries.parse('regions')
+            df_merged = pd.merge(regions,df[["Area"] + y_years], how='left',left_on=['country'],right_on=['Area'])
+            df_not_merged = df.loc[~df["Area"].isin(regions['country']) ,:]
+            
+            # Save outputs    
+            print("\t\tSaving outputs.")
+            f_countries = os.path.join(final_path,"OK","population_countries.csv")
+            df_merged.to_csv(f_countries, index = False, encoding = encoding)
+            df_not_merged.to_csv(os.path.join(final_path,"ER","population_countries_not_merged.csv"), index = False, encoding = encoding)
+
+            total_regions = df_merged.groupby(['region'])[y_years].sum()            
+            f_regions = os.path.join(final_path,"SM","population_region.csv")
+            total_regions.to_csv(f_regions, index = True, encoding = encoding)
+
+            df_final = pd.merge(total_regions,df_merged, how='inner',on=['region'])
+            col_names = []
+            for y in y_years:
+                col_names.append(y)
+                df_final[y] = df_final[y + "_y"] / df_final[y + "_x"]
+            
+            df_final = df_final[["region","country","iso2","iso3"] + col_names]
+            f_segregated = os.path.join(final_path,"SM","population_segregated.csv")
+            df_final.to_csv(f_segregated, index = False, encoding = encoding)
+            print("\t\tOutputs saved.")
+    return final_path
+
+
+# Method that calculates the interdependence
+# (XLSParse) conf_countries: XLS Parse object which has the configurations for countries
+# (string) location: String with the path of where the system should take the files.
+#                   It will filter all csv files from the path.
+#                   It just will process the OK files
+# (string) path: Location where the files should be saved
+# (int[]) years: Array of ints with the years which will be sum
+# (string[]) special_files: List of files. These files will be processed with proportion method
+# (string) population: Path where the population files are. 
+#                   It should have the three files: population by country, region and segregated
+# (string) step: prefix of the output files. By default it is 10
+# (string) encoding: Encoding files. By default it is ISO-8859-1
+# (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+#               By default it is False
+def calculate_interdependence(conf_crops, location, path, years, special_files, population, step="10",encoding="ISO-8859-1",force=False):
+    final_path = os.path.join(path,"fao",step)
+    create_review_folders(final_path)
+    y_years = ["Y" + str(x) for x in years]
+    region_crops = conf_crops.parse("regions")
+    
+    # Loading the population files
+    #df_population_countries = pd.read_csv(os.path.join(population,"OK","population_countries.csv"), encoding = encoding)
+    df_population_region = pd.read_csv(os.path.join(population,"SM","population_region.csv"), encoding = encoding)
+    df_population_segregated = pd.read_csv(os.path.join(population,"SM","population_segregated.csv"), encoding = encoding)
+    
+    # Get files to process
+    files = glob.glob(os.path.join(location,'OK',"*.csv"))
+    for full_name in files:
+        f_name = full_name.rsplit(os.path.sep, 1)[-1]
+        f_name = os.path.splitext(f_name)[0]
+        final_file = os.path.join(final_path,"SM",f_name + ".csv")
+        # It checks if files should be force to process again or if the path exist        
+        if force or not os.path.exists(final_file):                    
+            method = "proportion" if f_name in special_files else "sum"
+
+            print("\tWorking with:",full_name,"Method:",method)
+            df = pd.read_csv(full_name, encoding = encoding)   
+            
+            df_inter = id.interdependence(df,region_crops,method,y_years,final_path,f_name,df_population_region,df_population_segregated)
+            print("\tSaving output")
+            df_inter.to_csv(final_file, index = False, encoding = encoding)
+
+    print("OK")
