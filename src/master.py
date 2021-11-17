@@ -104,7 +104,10 @@ print("Counting by country")
 fao.count_countries(os.path.join(inputs_f_raw,"fao","07"), inputs_f_raw, fao_years, fao_countries_limit, 
                     fao_countries_suffix, encoding=fao_encoding)
 print("Calculating population")
-fao_f_population = fao.calculate_population(countries_xls, fao_downloaded_population, inputs_f_raw, fao_years,fao_element_population, 
+fao.calculate_population(countries_xls, fao_downloaded_population, inputs_f_raw, fao_years,fao_element_population, 
                     encoding=fao_encoding)
 print("Calculating interdependence")
-fao.calculate_interdependence(crops_xls,os.path.join(inputs_f_raw,"fao","06"),inputs_f_raw,fao_years,fao_special_files,fao_f_population)
+fao.calculate_interdependence(crops_xls,os.path.join(inputs_f_raw,"fao","06"),inputs_f_raw, fao_years,fao_special_files,
+                    os.path.join(inputs_f_raw,"fao","09"))
+print("Calculating gini")
+fao.calculate_gini(countries_xls, os.path.join(inputs_f_raw,"fao","10"),inputs_f_raw, fao_years, force=True)
