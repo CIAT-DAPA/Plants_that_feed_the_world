@@ -10,6 +10,7 @@
 
 /src/tools/__pycache__
 /src/raw_data/__pycache__
+\src\tools\__pycache__
 
 # Jupyter
 */.ipynb_checkpoints/*

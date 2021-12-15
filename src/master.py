@@ -3,6 +3,7 @@
 ##############################################
 import os
 import pandas as pd
+from raw_data.google import Google
 
 os.chdir('/indicator/src')
 
@@ -10,6 +11,7 @@ import tools.manage_files as mf
 import tools.download as dl
 
 import raw_data.fao as fao
+from raw_data.google import Google
 
 ##############################################
 # 02 - Setting configuration
@@ -58,9 +60,11 @@ fao_countries_limit = float(conf_general.loc[conf_general["variable"] == "fao_co
 fao_countries_suffix =  conf_general.loc[conf_general["variable"] == "fao_countries_suffix","value"].values[0]
 fao_element_population =  conf_general.loc[conf_general["variable"] == "fao_element_population","value"].values[0]
 fao_years = [2015,2016,2017,2018]
-print("FAO encoding: " + fao_encoding)
-print("FAO production: " + fao_production)
-print("FAO production field: " + fao_production_field)
+google_file = conf_general.loc[conf_general["variable"] == "google_file","value"].values[0]
+google_sheet = conf_general.loc[conf_general["variable"] == "google_sheet","value"].values[0]
+google_field_crop = conf_general.loc[conf_general["variable"] == "google_field_crop","value"].values[0]
+google_fields_elements = str(conf_general.loc[conf_general["variable"] == "google_fields_elements","value"].values[0]).split(',')
+
 
 ##############################################
 # 03 - Downloading data from sources
@@ -73,9 +77,9 @@ conf_downloads["output"] = conf_downloads.apply(lambda x: dl.download_url(x.url,
 
 
 ##############################################
-# 04 - Processing downloaded data
+# 04 - Processing FAO downloaded data
 ##############################################
-print("04 - Processing downloaded data")
+print("04 - Processing FAO downloaded data")
 
 # Processing fao data
 fao_downloaded = conf_downloads.loc[conf_downloads["database"] == "fao","output"]
@@ -110,4 +114,13 @@ print("Calculating interdependence")
 fao.calculate_interdependence(crops_xls,os.path.join(inputs_f_raw,"fao","06"),inputs_f_raw, fao_years,fao_special_files,
                     os.path.join(inputs_f_raw,"fao","09"))
 print("Calculating gini")
-fao.calculate_gini(countries_xls, os.path.join(inputs_f_raw,"fao","10"),inputs_f_raw, fao_years, force=True)
+fao.calculate_gini(countries_xls, os.path.join(inputs_f_raw,"fao","10"),inputs_f_raw, fao_years)
+
+##############################################
+# 05 - Processing Google downloaded data
+##############################################
+print("05 - Processing Google downloaded data")
+
+google = Google()
+print("Fixing format of Google data")
+google.fix_data(os.path.join(inputs_f_downloads,google_file),inputs_f_raw,google_sheet,google_field_crop,google_fields_elements)
