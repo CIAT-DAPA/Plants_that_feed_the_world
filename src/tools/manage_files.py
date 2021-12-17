@@ -17,6 +17,6 @@ def create_review_folders(path, ok=True, er=True, sm=True):
     if ok:
         mkdir(os.path.join(path,"OK"))
     if er:
-        mf.mkdir(os.path.join(path,"ER"))
+        mkdir(os.path.join(path,"ER"))
     if sm:
         mkdir(os.path.join(path,"SM"))

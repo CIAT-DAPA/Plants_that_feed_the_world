@@ -19,7 +19,7 @@ class Google(object):
         self.encoding = encoding
         self.year = year
 
-    # Method that counts how many countries have crops.
+    # Method that fix the format of google schoolar data
     # (string) location: String with the path of where the system should take the XLS file.
     # (string) path: Location where the files should be saved    
     # (string) sheet: Sheet name where data is saved

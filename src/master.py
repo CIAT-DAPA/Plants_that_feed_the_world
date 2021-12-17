@@ -4,6 +4,7 @@
 import os
 import pandas as pd
 from raw_data.google import Google
+from raw_data.wikipedia import Wikipedia
 
 os.chdir('/indicator/src')
 
@@ -49,6 +50,8 @@ countries_list = countries_xls.parse("countries")
 print("Loading crops")
 crops_xls = pd.ExcelFile(os.path.join(conf_folder,"crops.xlsx"))
 crops_list = crops_xls.parse("crops")
+crops_genus_list = crops_xls.parse("crops_genus")
+taxa_list = crops_xls.parse("taxa")
 
 # Extracting global parameters
 print("Extracting global parameters")
@@ -64,6 +67,9 @@ google_file = conf_general.loc[conf_general["variable"] == "google_file","value"
 google_sheet = conf_general.loc[conf_general["variable"] == "google_sheet","value"].values[0]
 google_field_crop = conf_general.loc[conf_general["variable"] == "google_field_crop","value"].values[0]
 google_fields_elements = str(conf_general.loc[conf_general["variable"] == "google_fields_elements","value"].values[0]).split(',')
+wikipedia_url = conf_general.loc[conf_general["variable"] == "wikipedia_url","value"].values[0]
+wikipedia_timing = conf_general.loc[conf_general["variable"] == "wikipedia_timing","value"].values[0]
+wikipedia_years = [int(y) for y in str(conf_general.loc[conf_general["variable"] == "wikipedia_years","value"].values[0]).split(',')]
 
 
 ##############################################
@@ -124,3 +130,12 @@ print("05 - Processing Google downloaded data")
 google = Google()
 print("Fixing format of Google data")
 google.fix_data(os.path.join(inputs_f_downloads,google_file),inputs_f_raw,google_sheet,google_field_crop,google_fields_elements)
+
+##############################################
+# 06 - Processing Wikipedia data
+##############################################
+print("06 - Processing Wikipedia data")
+
+wikipedia = Wikipedia(url=wikipedia_url,timing=wikipedia_timing,years=wikipedia_years)
+print("Getting wikipedia views data")
+wikipedia.get_pageviews(inputs_f_raw,crops_genus_list,taxa_list)
