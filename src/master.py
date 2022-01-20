@@ -51,8 +51,8 @@ print("Loading crops")
 crops_xls = pd.ExcelFile(os.path.join(conf_folder,"crops.xlsx"))
 crops_list = crops_xls.parse("crops")
 crops_genus_list = crops_xls.parse("crops_genus")
-taxa_list = crops_xls.parse("taxa")
-
+crops_taxa_list = crops_xls.parse("crops_taxa")
+crops_common_list = crops_xls.parse("crops_common")
 # Extracting global parameters
 print("Extracting global parameters")
 fao_encoding = conf_general.loc[conf_general["variable"] == "fao_encoding","value"].values[0]
@@ -138,4 +138,4 @@ print("06 - Processing Wikipedia data")
 
 wikipedia = Wikipedia(url=wikipedia_url,timing=wikipedia_timing,years=wikipedia_years)
 print("Getting wikipedia views data")
-wikipedia.get_pageviews(inputs_f_raw,crops_genus_list,taxa_list)
+wikipedia.get_pageviews(inputs_f_raw,crops_genus_list,crops_taxa_list, crops_common_list)
