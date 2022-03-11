@@ -26,6 +26,11 @@ class Wikipedia(object):
         self.encoding = encoding
         self.years = years
 
+    # Method that search how many views had a term in wikipedia
+    # it uses the wikipedia media api.
+    # it prints when url doesn't have views.
+    # (string) url: url to search data. the base url is saved into url property
+    # return: Total number of views of the url
     def request_wikipedia(self, url):                
         views = 0
         headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
@@ -38,7 +43,9 @@ class Wikipedia(object):
         return views
 
 
-    # Method that counts how many countries have crops.
+    # Method that counts how many countries have crops and terms related to them.
+    # It generates two types of files: in OK you can see by each variable per year and
+    # the SM you can extract the final file
     # (string) path: Location where the files should be saved    
     # (dataframe) crops_genus: Sheet name where data is saved
     # (dataframe) taxa: Field name which has the crop name
@@ -48,7 +55,7 @@ class Wikipedia(object):
     #               By default it is False
     def get_pageviews(self, path, crops_genus, taxa, common_names, step="01",force = False):
         final_path = os.path.join(path,"wikipedia",step)
-        mf.create_review_folders(final_path)
+        mf.create_review_folders(final_path, er=False)
 
         final_file = os.path.join(final_path,"SM","wikipedia.csv")
         # It checks if files should be force to process again or if the path exist
@@ -75,7 +82,7 @@ class Wikipedia(object):
                 
                 df_temp = pd.melt(df, id_vars=['crop'], value_vars=['genus_count','common_name_count','taxa_count'])
                 df_temp.columns = ["crop","Element","Y" + str(y)]
-                if df_final.shape[1] == 0:
+                if df_final.shape[0] == 0:
                     df_final = df_temp
                 else:
                     df_final = pd.merge(df_final,df_temp,how="cross",on=["crop","Element"])

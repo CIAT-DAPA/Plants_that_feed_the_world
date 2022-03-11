@@ -5,6 +5,8 @@ import os
 import pandas as pd
 from raw_data.google import Google
 from raw_data.wikipedia import Wikipedia
+from raw_data.previous_data import PreviousData
+from raw_data.fao_sow import FaoSow
 
 os.chdir('/indicator/src')
 
@@ -53,6 +55,7 @@ crops_list = crops_xls.parse("crops")
 crops_genus_list = crops_xls.parse("crops_genus")
 crops_taxa_list = crops_xls.parse("crops_taxa")
 crops_common_list = crops_xls.parse("crops_common")
+new_names_list = crops_xls.parse("new_names")
 # Extracting global parameters
 print("Extracting global parameters")
 fao_encoding = conf_general.loc[conf_general["variable"] == "fao_encoding","value"].values[0]
@@ -70,6 +73,18 @@ google_fields_elements = str(conf_general.loc[conf_general["variable"] == "googl
 wikipedia_url = conf_general.loc[conf_general["variable"] == "wikipedia_url","value"].values[0]
 wikipedia_timing = conf_general.loc[conf_general["variable"] == "wikipedia_timing","value"].values[0]
 wikipedia_years = [int(y) for y in str(conf_general.loc[conf_general["variable"] == "wikipedia_years","value"].values[0]).split(',')]
+genebank_fields = str(conf_general.loc[conf_general["variable"] == "genebank_fields","value"].values[0]).split(',')
+upov_fields = str(conf_general.loc[conf_general["variable"] == "upov_fields","value"].values[0]).split(',')
+gbif_research_fields = str(conf_general.loc[conf_general["variable"] == "gbif_research_fields","value"].values[0]).split(',')
+fao_sow_file = conf_general.loc[conf_general["variable"] == "fao_sow_file","value"].values[0]
+fao_sow_field_crop = conf_general.loc[conf_general["variable"] == "fao_sow_field_crop","value"].values[0]
+fao_sow_field_filter = conf_general.loc[conf_general["variable"] == "fao_sow_field_filter","value"].values[0]
+fao_sow_value_filter = conf_general.loc[conf_general["variable"] == "fao_sow_value_filter","value"].values[0]
+fao_sow_field_count = conf_general.loc[conf_general["variable"] == "fao_sow_field_count","value"].values[0]
+fao_sow_field_year = conf_general.loc[conf_general["variable"] == "fao_sow_field_year","value"].values[0]
+fao_sow_years = [int(y) for y in str(conf_general.loc[conf_general["variable"] == "fao_sow_years","value"].values[0]).split(',')]
+fao_sow_field_recipient = conf_general.loc[conf_general["variable"] == "fao_sow_field_recipient","value"].values[0]
+
 
 
 ##############################################
@@ -139,3 +154,52 @@ print("06 - Processing Wikipedia data")
 wikipedia = Wikipedia(url=wikipedia_url,timing=wikipedia_timing,years=wikipedia_years)
 print("Getting wikipedia views data")
 wikipedia.get_pageviews(inputs_f_raw,crops_genus_list,crops_taxa_list, crops_common_list)
+
+##############################################
+# 07 - Processing Genebank data
+##############################################
+print("07 - Processing Genebank data")
+
+genebank = PreviousData(final_file="genebank_collection.csv")
+print("Checking and fixing genebanks collection data")
+genebank.check_and_fix_data(os.path.join(inputs_f_downloads,"genebank_collections.csv"), inputs_f_raw, 
+        "genebank", crops_list,  new_names_list, genebank_fields)
+
+##############################################
+# 08 - Processing Upov data
+##############################################
+print("08 - Processing Upov data")
+
+upov = PreviousData(final_file="upov_varietal_release.csv")
+print("Checking and fixing UPOV data")
+upov.check_and_fix_data(os.path.join(inputs_f_downloads,"upov_varietal_release.csv"), inputs_f_raw, 
+        "upov", crops_list,  new_names_list, upov_fields)
+
+##############################################
+# 09 - Processing GBIF Research data
+##############################################
+print("09 - Processing GBIF Research data")
+
+upov = PreviousData(final_file="gbif_research_supply.csv")
+print("Checking and fixing GBIF data")
+upov.check_and_fix_data(os.path.join(inputs_f_downloads,"gbif_research_supply.csv"), inputs_f_raw, 
+        "gbif", crops_list,  new_names_list, gbif_research_fields)
+
+##############################################
+# 10 - Processing FAO SOW III Study
+##############################################
+print("10 - Processing FAO SOW III Study")
+
+fao_sow = FaoSow(fao_sow_field_crop, fao_sow_field_filter, fao_sow_value_filter, fao_sow_field_count, fao_sow_field_year,
+                        fao_sow_years, fao_sow_field_recipient, inputs_f_raw)
+print("Filtering, counting and selection data")
+fao_sow_input = fao_sow.filter_sum_distribution(os.path.join(inputs_f_downloads,fao_sow_file))
+print("Counting recipients countries")
+fao_sow.count_country_recipients(fao_sow_input)
+print("Calculating interdependence")
+fao_sow_interdependence = fao_sow.calculate_interdependence(fao_sow_input,crops_xls,os.path.join(inputs_f_raw,"fao","09"))
+print("Calculating gini")
+fao_sow.calculate_gini(fao_sow_interdependence, countries_xls)
+print("Sum transfers")
+fao_sow.sum_transfers(fao_sow_input)
+
