@@ -41,10 +41,13 @@ class FaoSow(object):
         self.file = file
         self.folder = folder
         self.encoding = encoding
-    
+
     # Method that filter data for specific records,
     # further it select the fields needed, finally it aggregates the transfers
-    # of accessions by crop, country and year
+    # of accessions by crop, country and year`
+    # (string) location:  String with the path of where the system should take the files.
+    #                   It will filter all csv files from the path.
+    #                   It just will process the OK files`
     # (string) step: prefix of the output files. By default it is 01
     # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
     #               By default it is False
@@ -66,7 +69,7 @@ class FaoSow(object):
             df = df[[self.field_crop,self.field_recipient,self.field_year,self.field_count]]
             df.columns = ["crop","country","year","samples"]
             df["year"] = "Y" + df["year"].astype(str)
-            df = df.pivot_table(index=["crop","country"], columns=["year"], values="samples")
+            df = df.pivot_table(index=["crop","country"], columns=["year"], values="samples", aggfunc=np.sum)
             df.reset_index(level=["crop","country"], inplace=True)
             df.to_csv(final_file, index = False, encoding = self.encoding)
 

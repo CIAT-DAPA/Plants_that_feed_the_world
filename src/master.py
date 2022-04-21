@@ -7,6 +7,7 @@ from raw_data.google import Google
 from raw_data.wikipedia import Wikipedia
 from raw_data.previous_data import PreviousData
 from raw_data.fao_sow import FaoSow
+from raw_data.mls import MLS
 
 os.chdir('/indicator/src')
 
@@ -84,7 +85,10 @@ fao_sow_field_count = conf_general.loc[conf_general["variable"] == "fao_sow_fiel
 fao_sow_field_year = conf_general.loc[conf_general["variable"] == "fao_sow_field_year","value"].values[0]
 fao_sow_years = [int(y) for y in str(conf_general.loc[conf_general["variable"] == "fao_sow_years","value"].values[0]).split(',')]
 fao_sow_field_recipient = conf_general.loc[conf_general["variable"] == "fao_sow_field_recipient","value"].values[0]
-
+mls_accessions_file = conf_general.loc[conf_general["variable"] == "mls_accessions_file","value"].values[0]
+mls_accessions_year = conf_general.loc[conf_general["variable"] == "mls_accessions_year","value"].values[0]
+mls_institutions_file = conf_general.loc[conf_general["variable"] == "mls_institutions_file","value"].values[0]
+mls_institutions_year = conf_general.loc[conf_general["variable"] == "mls_institutions_year","value"].values[0]
 
 
 ##############################################
@@ -203,3 +207,12 @@ fao_sow.calculate_gini(fao_sow_interdependence, countries_xls)
 print("Sum transfers")
 fao_sow.sum_transfers(fao_sow_input)
 
+##############################################
+# 12 - Processing MLS
+##############################################
+print("12 - Processing MLS")
+mls_accessions = MLS('mls_accessions.csv',inputs_f_raw,"mls_accesions")
+mls_accessions.extract_data(os.path.join(inputs_f_downloads,mls_accessions_file),mls_accessions_year)
+
+mls_institutions = MLS('mls_institutions.csv',inputs_f_raw,"mls_institutions")
+mls_institutions.extract_data(os.path.join(inputs_f_downloads,mls_institutions_file),mls_institutions_year)
