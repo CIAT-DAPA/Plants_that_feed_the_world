@@ -7,7 +7,9 @@ from raw_data.google import Google
 from raw_data.wikipedia import Wikipedia
 from raw_data.previous_data import PreviousData
 from raw_data.fao_sow import FaoSow
+from raw_data.fao_wiews import FaoWiews
 from raw_data.mls import MLS
+from indicator.indicator import Indicator
 
 os.chdir('/indicator/src')
 
@@ -29,6 +31,7 @@ conf_folder = os.path.join(data_folder, "conf")
 inputs_folder = os.path.join(data_folder, "inputs")
 inputs_f_downloads = os.path.join(inputs_folder, "01_downloads")
 inputs_f_raw = os.path.join(inputs_folder, "02_raw")
+inputs_f_indicator = os.path.join(inputs_folder, "03_indicator")
 # Logs
 logs_folder = os.path.join(data_folder, "logs")
 
@@ -37,6 +40,7 @@ print("Creating folders")
 mf.mkdir(inputs_folder)
 mf.mkdir(inputs_f_downloads)
 mf.mkdir(inputs_f_raw)
+mf.mkdir(inputs_f_indicator)
 mf.mkdir(logs_folder)
 
 # Loading configurations
@@ -89,7 +93,14 @@ mls_accessions_file = conf_general.loc[conf_general["variable"] == "mls_accessio
 mls_accessions_year = conf_general.loc[conf_general["variable"] == "mls_accessions_year","value"].values[0]
 mls_institutions_file = conf_general.loc[conf_general["variable"] == "mls_institutions_file","value"].values[0]
 mls_institutions_year = conf_general.loc[conf_general["variable"] == "mls_institutions_year","value"].values[0]
-
+fao_wiews_file = conf_general.loc[conf_general["variable"] == "fao_wiews_file","value"].values[0]
+fao_wiews_field_crop = conf_general.loc[conf_general["variable"] == "fao_wiews_field_crop","value"].values[0]
+fao_wiews_field_filter = conf_general.loc[conf_general["variable"] == "fao_wiews_field_filter","value"].values[0]
+fao_wiews_value_filter = conf_general.loc[conf_general["variable"] == "fao_wiews_value_filter","value"].values[0]
+fao_wiews_fields_elements = str(conf_general.loc[conf_general["variable"] == "fao_wiews_fields_elements","value"].values[0]).split(',')
+fao_wiews_field_year = conf_general.loc[conf_general["variable"] == "fao_wiews_field_year","value"].values[0]
+fao_wiews_years = [int(y) for y in str(conf_general.loc[conf_general["variable"] == "fao_wiews_years","value"].values[0]).split(',')]
+fao_wiews_field_recipient = conf_general.loc[conf_general["variable"] == "fao_wiews_field_recipient","value"].values[0]
 
 ##############################################
 # 03 - Downloading data from sources
@@ -136,10 +147,14 @@ print("Calculating population")
 fao.calculate_population(countries_xls, fao_downloaded_population, inputs_f_raw, fao_years,fao_element_population, 
                     encoding=fao_encoding)
 print("Calculating interdependence")
-fao.calculate_interdependence(crops_xls,os.path.join(inputs_f_raw,"fao","06"),inputs_f_raw, fao_years,fao_special_files,
+fao_out_inter = fao.calculate_interdependence(crops_xls,os.path.join(inputs_f_raw,"fao","06"),inputs_f_raw, fao_years,fao_special_files,
                     os.path.join(inputs_f_raw,"fao","09"))
 print("Calculating gini")
 fao.calculate_gini(countries_xls, os.path.join(inputs_f_raw,"fao","10"),inputs_f_raw, fao_years)
+print("Summarizing data for crops through countries")
+fao.summarize_data(os.path.join(inputs_f_raw,"fao","06"), inputs_f_raw, fao_years, encoding=fao_encoding)
+print("Summarizing data for crops through countries")
+fao.extracting_interdependence(fao_out_inter, inputs_f_raw, fao_years, encoding=fao_encoding)
 
 ##############################################
 # 05 - Processing Google downloaded data
@@ -190,9 +205,9 @@ upov.check_and_fix_data(os.path.join(inputs_f_downloads,"gbif_research_supply.cs
         "gbif", crops_list,  new_names_list, gbif_research_fields)
 
 ##############################################
-# 10 - Processing FAO SOW III Study
+# 10 - Processing FAO SOW III Study Treaty
 ##############################################
-print("10 - Processing FAO SOW III Study")
+print("10 - Processing FAO SOW III Study Treaty")
 
 fao_sow = FaoSow(fao_sow_field_crop, fao_sow_field_filter, fao_sow_value_filter, fao_sow_field_count, fao_sow_field_year,
                         fao_sow_years, fao_sow_field_recipient, inputs_f_raw)
@@ -208,6 +223,16 @@ print("Sum transfers")
 fao_sow.sum_transfers(fao_sow_input)
 
 ##############################################
+# 11 - Processing FAO SOW III Study WIEWS
+##############################################
+print("11 - Processing FAO SOW III Study WIEWS")
+
+fao_wiews = FaoWiews(fao_wiews_field_crop, fao_wiews_field_filter, fao_wiews_value_filter, fao_wiews_fields_elements, 
+                        fao_wiews_years, fao_wiews_field_recipient, inputs_f_raw)
+print("Filtering, counting and selection data")
+fao_wiews_input = fao_wiews.filter_sum_distribution(os.path.join(inputs_f_downloads,fao_wiews_file),fao_wiews_field_year)
+
+##############################################
 # 12 - Processing MLS
 ##############################################
 print("12 - Processing MLS")
@@ -216,3 +241,10 @@ mls_accessions.extract_data(os.path.join(inputs_f_downloads,mls_accessions_file)
 
 mls_institutions = MLS('mls_institutions.csv',inputs_f_raw,"mls_institutions")
 mls_institutions.extract_data(os.path.join(inputs_f_downloads,mls_institutions_file),mls_institutions_year)
+
+##############################################
+# 13 - Indicator
+##############################################
+
+
+#indicator = Indicator()

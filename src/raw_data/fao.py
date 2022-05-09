@@ -537,7 +537,7 @@ def calculate_interdependence(conf_crops, location, path, years, special_files, 
             df_inter = id.interdependence(df,region_crops,method,y_years,final_path,f_name,df_population_region,df_population_segregated)
             print("\tSaving output")
             df_inter.to_csv(final_file, index = False, encoding = encoding)
-    return os.path.join(final_path,"OK")
+    return final_path
 
 # Method that calculates the gini indicator to raw data
 # (XLSParse) conf_countries: XLS Parse object which has the configurations for countries
@@ -574,3 +574,80 @@ def calculate_gini(conf_countries, location, path, years, step="11",encoding="IS
             print("\tSaving output")
             df_gini.to_csv(final_file, index = False, encoding = encoding)
 
+# Method that summarize data for crops and elements through countries.
+# (string) location: String with the path of where the system should take the files.
+#                   It will filter all csv files from the path.
+#                   It just will process the OK files
+# (string) path: Location where the files should be saved
+# (int[]) years: Array of ints with the years which will be sum
+# (string) step: prefix of the output files. By default it is 12
+# (string) encoding: Encoding files. By default it is ISO-8859-1
+# (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+#               By default it is False
+def summarize_data(location,path,years,step="12",encoding="ISO-8859-1",force=False):        
+    final_path = os.path.join(path,"fao",step)
+    create_review_folders(final_path,er=False,sm=False)
+    # Get files to process
+    files = glob.glob(os.path.join(location,'OK',"*.csv"))
+    # Create a list of years
+    y_years = ["Y" + str(x) for x in years]
+    # Loop for all faostat files which where downloaded
+    for full_name in files:
+        f_name = full_name.rsplit(os.path.sep, 1)[-1]
+        f_name = os.path.splitext(f_name)[0]
+        # It checks if files should be force to process again or if the path exist
+        if force or not os.path.exists(os.path.join(final_path,"OK",f_name + ".csv")):
+            # Getting from source
+            print("\tWorking with: " + full_name)
+            df = pd.read_csv(full_name, encoding = encoding)
+            # Filtering just data for countries
+            df = df.loc[~df["iso2"].isna(),:]
+
+            # Summarizing by country, element
+            print("\tSummarizing by country and element")
+            df = df.groupby(["crop","Element"], as_index=False)[y_years].sum()
+            # Saving outputs
+            print("\tSaving output")
+            df.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)
+        else:
+            print("\tNot processed: " + full_name)
+
+# Method that creates a final file with data for interdependence through the years
+# (string) location: String with the path of where the system should take the files.
+#                   It will filter all csv files from the path.
+#                   It just will process the OK files
+# (string) path: Location where the files should be saved
+# (int[]) years: Array of ints with the years which will be sum
+# (string) step: prefix of the output files. By default it is 12
+# (string) encoding: Encoding files. By default it is ISO-8859-1
+# (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+#               By default it is False
+def extracting_interdependence(location,path,years,step="13",encoding="ISO-8859-1",force=False):
+    final_path = os.path.join(path,"fao",step)
+    create_review_folders(final_path,er=False,sm=False)
+    # Get files to process
+    print("Hola")
+    print(location)
+    files = glob.glob(os.path.join(location,'SM',"*.csv"))    
+    print(files)
+    # Loop for all faostat files which where downloaded
+    for full_name in files:
+        f_name = full_name.rsplit(os.path.sep, 1)[-1]
+        f_name = os.path.splitext(f_name)[0]
+        # It checks if files should be force to process again or if the path exist
+        if force or not os.path.exists(os.path.join(final_path,"OK",f_name + ".csv")):
+            # Getting from source
+            print("\tWorking with: " + full_name)
+            df = pd.read_csv(full_name, encoding = encoding)
+            
+            # Extracting data
+            current_cols = ["Y" + str(y) + "_global" for y in years]
+            new_cols = ["Y" + str(y) for y in years]
+            df = df[["crop","Element"] + current_cols]
+            df.columns = ["crop","Element"]+ new_cols
+
+            # Saving outputs
+            print("\tSaving output")
+            df.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)
+        else:
+            print("\tNot processed: " + full_name)
