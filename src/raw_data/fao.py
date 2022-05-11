@@ -601,7 +601,7 @@ def summarize_data(location,path,years,step="12",encoding="ISO-8859-1",force=Fal
             print("\tWorking with: " + full_name)
             df = pd.read_csv(full_name, encoding = encoding)
             # Filtering just data for countries
-            df = df.loc[~df["iso2"].isna(),:]
+            df = df.loc[df["country"]=="World",:]
 
             # Summarizing by country, element
             print("\tSummarizing by country and element")

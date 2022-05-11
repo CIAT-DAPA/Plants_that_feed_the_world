@@ -49,6 +49,7 @@ conf_xls = pd.ExcelFile(os.path.join(conf_folder,"conf.xlsx"))
 conf_downloads = conf_xls.parse("downloads")
 conf_metrics = conf_xls.parse("metrics")
 conf_general = conf_xls.parse("general")
+conf_indicator = conf_xls.parse("indicator", dtype={'step': str})
 
 print("Loading countries")
 countries_xls = pd.ExcelFile(os.path.join(conf_folder,"countries.xlsx"))
@@ -71,6 +72,7 @@ fao_countries_limit = float(conf_general.loc[conf_general["variable"] == "fao_co
 fao_countries_suffix =  conf_general.loc[conf_general["variable"] == "fao_countries_suffix","value"].values[0]
 fao_element_population =  conf_general.loc[conf_general["variable"] == "fao_element_population","value"].values[0]
 fao_years = [2015,2016,2017,2018]
+all_years = [2015,2016,2017,2018,2019]
 google_file = conf_general.loc[conf_general["variable"] == "google_file","value"].values[0]
 google_sheet = conf_general.loc[conf_general["variable"] == "google_sheet","value"].values[0]
 google_field_crop = conf_general.loc[conf_general["variable"] == "google_field_crop","value"].values[0]
@@ -245,6 +247,13 @@ mls_institutions.extract_data(os.path.join(inputs_f_downloads,mls_institutions_f
 ##############################################
 # 13 - Indicator
 ##############################################
+print("13 - Indicator")
 
+indicator = Indicator(inputs_f_indicator)
 
-#indicator = Indicator()
+print("Creating raw file combined")
+indicator.extract_raw_data(inputs_f_raw,conf_indicator,all_years)
+print("Checking crop names and others")
+indicator.check_data(crops_list,new_names_list)
+print("Arranging format")
+indicator.arrange_format()
