@@ -47,10 +47,11 @@ class FaoWiews(object):
     #                   It will filter all csv files from the path.
     #                   It just will process the OK files`
     # (string) field_year: Name field which contains the year value
+    # (dataframe) new_names: Dataframe with 
     # (string) step: prefix of the output files. By default it is 01
     # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
     #               By default it is False
-    def filter_sum_distribution(self, location, field_year, step="01",force = False):
+    def filter_sum_distribution(self, location, field_year, new_names, step="01",force = False):
         final_path = os.path.join(self.root_path,self.folder,step)
         mf.create_review_folders(final_path, er=False,sm=False)
 
@@ -68,6 +69,12 @@ class FaoWiews(object):
             df = df[[self.field_crop,self.field_recipient,field_year] + self.fields_elements]
             df.columns = ["crop","country","year"] + self.fields_elements
             df["year"] = "Y" + df["year"].astype(str)
+
+            # Fixing crops names
+            df = pd.merge(df,new_names,how='left',left_on="crop", right_on="old")            
+            df.loc[~df["new"].isna(),"crop"] = df.loc[~df["new"].isna(),:]["new"]
+            df.drop(["new","old"],axis=1,inplace=True)
+
             df = df.groupby(["crop","year"], as_index=False)[self.fields_elements].sum()
             df_final = pd.DataFrame()
             # Loop which integrates many columns in just one with many rows (pivot)

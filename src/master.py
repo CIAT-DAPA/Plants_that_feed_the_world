@@ -232,7 +232,7 @@ print("11 - Processing FAO SOW III Study WIEWS")
 fao_wiews = FaoWiews(fao_wiews_field_crop, fao_wiews_field_filter, fao_wiews_value_filter, fao_wiews_fields_elements, 
                         fao_wiews_years, fao_wiews_field_recipient, inputs_f_raw)
 print("Filtering, counting and selection data")
-fao_wiews_input = fao_wiews.filter_sum_distribution(os.path.join(inputs_f_downloads,fao_wiews_file),fao_wiews_field_year)
+fao_wiews_input = fao_wiews.filter_sum_distribution(os.path.join(inputs_f_downloads,fao_wiews_file),fao_wiews_field_year,new_names_list)
 
 ##############################################
 # 12 - Processing MLS

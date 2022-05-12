@@ -574,7 +574,8 @@ def calculate_gini(conf_countries, location, path, years, step="11",encoding="IS
             print("\tSaving output")
             df_gini.to_csv(final_file, index = False, encoding = encoding)
 
-# Method that summarize data for crops and elements through countries.
+# Method that summarize data for crops and elements for World records.
+# It also removes records fully with 0
 # (string) location: String with the path of where the system should take the files.
 #                   It will filter all csv files from the path.
 #                   It just will process the OK files
@@ -603,9 +604,15 @@ def summarize_data(location,path,years,step="12",encoding="ISO-8859-1",force=Fal
             # Filtering just data for countries
             df = df.loc[df["country"]=="World",:]
 
-            # Summarizing by country, element
-            print("\tSummarizing by country and element")
+            # Summarizing by crop and element
+            print("\tSummarizing by crop and element")
             df = df.groupby(["crop","Element"], as_index=False)[y_years].sum()
+
+            # Removing zero values
+            print("\tRemoving zero records")
+            df["avg"] = df[y_years].mean(axis=1,skipna=True)
+            df = df.loc[df["avg"]!=0,:]
+            df.drop(["avg"],axis=1,inplace=True)
             # Saving outputs
             print("\tSaving output")
             df.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)
