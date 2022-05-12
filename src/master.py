@@ -71,8 +71,7 @@ fao_production_field = conf_general.loc[conf_general["variable"] == "fao_product
 fao_countries_limit = float(conf_general.loc[conf_general["variable"] == "fao_countries_limit","value"].values[0])
 fao_countries_suffix =  conf_general.loc[conf_general["variable"] == "fao_countries_suffix","value"].values[0]
 fao_element_population =  conf_general.loc[conf_general["variable"] == "fao_element_population","value"].values[0]
-fao_years = [2015,2016,2017,2018]
-all_years = [2015,2016,2017,2018,2019]
+fao_years = [int(y) for y in str(conf_general.loc[conf_general["variable"] == "fao_years","value"].values[0]).split(',')]
 google_file = conf_general.loc[conf_general["variable"] == "google_file","value"].values[0]
 google_sheet = conf_general.loc[conf_general["variable"] == "google_sheet","value"].values[0]
 google_field_crop = conf_general.loc[conf_general["variable"] == "google_field_crop","value"].values[0]
@@ -80,9 +79,16 @@ google_fields_elements = str(conf_general.loc[conf_general["variable"] == "googl
 wikipedia_url = conf_general.loc[conf_general["variable"] == "wikipedia_url","value"].values[0]
 wikipedia_timing = conf_general.loc[conf_general["variable"] == "wikipedia_timing","value"].values[0]
 wikipedia_years = [int(y) for y in str(conf_general.loc[conf_general["variable"] == "wikipedia_years","value"].values[0]).split(',')]
+genebank_file = conf_general.loc[conf_general["variable"] == "genebank_file","value"].values[0]
 genebank_fields = str(conf_general.loc[conf_general["variable"] == "genebank_fields","value"].values[0]).split(',')
+upov_file = conf_general.loc[conf_general["variable"] == "upov_file","value"].values[0]
 upov_fields = str(conf_general.loc[conf_general["variable"] == "upov_fields","value"].values[0]).split(',')
+gbif_research_file = conf_general.loc[conf_general["variable"] == "gbif_research_file","value"].values[0]
 gbif_research_fields = str(conf_general.loc[conf_general["variable"] == "gbif_research_fields","value"].values[0]).split(',')
+sgsv_file = conf_general.loc[conf_general["variable"] == "sgsv_file","value"].values[0]
+sgsv_fields = str(conf_general.loc[conf_general["variable"] == "sgsv_fields","value"].values[0]).split(',')
+primary_region_file = conf_general.loc[conf_general["variable"] == "primary_region_file","value"].values[0]
+primary_region_fields = str(conf_general.loc[conf_general["variable"] == "primary_region_fields","value"].values[0]).split(',')
 fao_sow_file = conf_general.loc[conf_general["variable"] == "fao_sow_file","value"].values[0]
 fao_sow_field_crop = conf_general.loc[conf_general["variable"] == "fao_sow_field_crop","value"].values[0]
 fao_sow_field_filter = conf_general.loc[conf_general["variable"] == "fao_sow_field_filter","value"].values[0]
@@ -103,7 +109,7 @@ fao_wiews_fields_elements = str(conf_general.loc[conf_general["variable"] == "fa
 fao_wiews_field_year = conf_general.loc[conf_general["variable"] == "fao_wiews_field_year","value"].values[0]
 fao_wiews_years = [int(y) for y in str(conf_general.loc[conf_general["variable"] == "fao_wiews_years","value"].values[0]).split(',')]
 fao_wiews_field_recipient = conf_general.loc[conf_general["variable"] == "fao_wiews_field_recipient","value"].values[0]
-
+all_years = [2015,2016,2017,2018,2019]
 ##############################################
 # 03 - Downloading data from sources
 ##############################################
@@ -181,9 +187,9 @@ wikipedia.get_pageviews(inputs_f_raw,crops_genus_list,crops_taxa_list, crops_com
 ##############################################
 print("07 - Processing Genebank data")
 
-genebank = PreviousData(final_file="genebank_collection.csv")
+genebank = PreviousData(final_file=genebank_file)
 print("Checking and fixing genebanks collection data")
-genebank.check_and_fix_data(os.path.join(inputs_f_downloads,"genebank_collections.csv"), inputs_f_raw, 
+genebank.check_and_fix_data(os.path.join(inputs_f_downloads,genebank_file), inputs_f_raw, 
         "genebank", crops_list,  new_names_list, genebank_fields)
 
 ##############################################
@@ -191,9 +197,9 @@ genebank.check_and_fix_data(os.path.join(inputs_f_downloads,"genebank_collection
 ##############################################
 print("08 - Processing Upov data")
 
-upov = PreviousData(final_file="upov_varietal_release.csv")
+upov = PreviousData(final_file=upov_file)
 print("Checking and fixing UPOV data")
-upov.check_and_fix_data(os.path.join(inputs_f_downloads,"upov_varietal_release.csv"), inputs_f_raw, 
+upov.check_and_fix_data(os.path.join(inputs_f_downloads,upov_file), inputs_f_raw, 
         "upov", crops_list,  new_names_list, upov_fields)
 
 ##############################################
@@ -201,9 +207,9 @@ upov.check_and_fix_data(os.path.join(inputs_f_downloads,"upov_varietal_release.c
 ##############################################
 print("09 - Processing GBIF Research data")
 
-upov = PreviousData(final_file="gbif_research_supply.csv")
+upov = PreviousData(final_file=gbif_research_file)
 print("Checking and fixing GBIF data")
-upov.check_and_fix_data(os.path.join(inputs_f_downloads,"gbif_research_supply.csv"), inputs_f_raw, 
+upov.check_and_fix_data(os.path.join(inputs_f_downloads,gbif_research_file), inputs_f_raw, 
         "gbif", crops_list,  new_names_list, gbif_research_fields)
 
 ##############################################
@@ -245,6 +251,27 @@ mls_institutions = MLS('mls_institutions.csv',inputs_f_raw,"mls_institutions")
 mls_institutions.extract_data(os.path.join(inputs_f_downloads,mls_institutions_file),mls_institutions_year)
 
 ##############################################
+# 13 - Processing SGSV
+##############################################
+print("13 - Processing SGSV")
+
+sgsv = PreviousData(final_file=sgsv_file)
+print("Checking and fixing SGSV data")
+sgsv.check_and_fix_data(os.path.join(inputs_f_downloads,sgsv_file), inputs_f_raw, 
+        "sgsv", crops_list,  new_names_list, sgsv_fields)
+
+##############################################
+# 14 - Processing Primary Region
+##############################################
+print("14 - Processing Primary Region")
+
+primary_region = PreviousData(final_file=primary_region_file)
+print("Checking and fixing Primary Region data")
+primary_region.check_and_fix_data(os.path.join(inputs_f_downloads,primary_region_file), inputs_f_raw, 
+        "primary_region", crops_list,  new_names_list, primary_region_fields)
+
+"""
+##############################################
 # 13 - Indicator
 ##############################################
 print("13 - Indicator")
@@ -257,3 +284,4 @@ print("Checking crop names and others")
 indicator.check_data(crops_list,new_names_list)
 print("Arranging format")
 indicator.arrange_format()
+"""
