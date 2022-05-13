@@ -9,6 +9,7 @@ from raw_data.previous_data import PreviousData
 from raw_data.fao_sow import FaoSow
 from raw_data.fao_wiews import FaoWiews
 from raw_data.mls import MLS
+from raw_data.collections import Collection
 from indicator.indicator import Indicator
 
 os.chdir('/indicator/src')
@@ -109,6 +110,19 @@ fao_wiews_fields_elements = str(conf_general.loc[conf_general["variable"] == "fa
 fao_wiews_field_year = conf_general.loc[conf_general["variable"] == "fao_wiews_field_year","value"].values[0]
 fao_wiews_years = [int(y) for y in str(conf_general.loc[conf_general["variable"] == "fao_wiews_years","value"].values[0]).split(',')]
 fao_wiews_field_recipient = conf_general.loc[conf_general["variable"] == "fao_wiews_field_recipient","value"].values[0]
+botanic_file = conf_general.loc[conf_general["variable"] == "botanic_file","value"].values[0]
+botanic_sheet = conf_general.loc[conf_general["variable"] == "botanic_sheet","value"].values[0]
+botanic_fields = conf_general.loc[conf_general["variable"] == "botanic_fields","value"].values[0].split(",")
+botanic_field_genus = conf_general.loc[conf_general["variable"] == "botanic_field_genus","value"].values[0]
+botanic_field_taxon = conf_general.loc[conf_general["variable"] == "botanic_field_taxon","value"].values[0]
+botanic_year = conf_general.loc[conf_general["variable"] == "botanic_year","value"].values[0]
+
+fao_varietal_file = conf_general.loc[conf_general["variable"] == "fao_varietal_file","value"].values[0]
+fao_varietal_sheet = conf_general.loc[conf_general["variable"] == "fao_varietal_sheet","value"].values[0]
+fao_varietal_field_genus = conf_general.loc[conf_general["variable"] == "fao_varietal_field_genus","value"].values[0]
+fao_varietal_field_taxon = conf_general.loc[conf_general["variable"] == "fao_varietal_field_taxon","value"].values[0]
+fao_varietal_year_column = conf_general.loc[conf_general["variable"] == "fao_varietal_year_column","value"].values[0]
+
 all_years = [2015,2016,2017,2018,2019]
 ##############################################
 # 03 - Downloading data from sources
@@ -269,6 +283,27 @@ primary_region = PreviousData(final_file=primary_region_file)
 print("Checking and fixing Primary Region data")
 primary_region.check_and_fix_data(os.path.join(inputs_f_downloads,primary_region_file), inputs_f_raw, 
         "primary_region", crops_list,  new_names_list, primary_region_fields)
+
+##############################################
+# 15 - Processing Botanic
+##############################################
+print("15 - Processing Botanic")
+
+botanic = Collection("botanic")
+print("Extracting data")
+botanic.extract_data(os.path.join(inputs_f_downloads,botanic_file),botanic_sheet, inputs_f_raw, 
+        crops_genus_list,crops_taxa_list,new_names_list,botanic_field_genus,botanic_field_taxon,botanic_fields,year=botanic_year)
+
+##############################################
+# 16 - Processing FAO Varietal
+##############################################
+print("16 - Processing FAO Varietal")
+
+fao_varietal = Collection("fao_varietal")
+print("Extracting data")
+fao_varietal.extract_data(os.path.join(inputs_f_downloads,fao_varietal_file),fao_varietal_sheet, inputs_f_raw, 
+        crops_genus_list,crops_taxa_list,new_names_list,fao_varietal_field_genus,fao_varietal_field_taxon,fields=None,
+        add_value=True,column_year=fao_varietal_year_column)
 
 """
 ##############################################
