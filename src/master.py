@@ -10,6 +10,7 @@ from raw_data.fao_sow import FaoSow
 from raw_data.fao_wiews import FaoWiews
 from raw_data.mls import MLS
 from raw_data.collections import Collection
+from raw_data.ncbi import NCBI
 from indicator.indicator import Indicator
 
 os.chdir('/indicator/src')
@@ -116,12 +117,15 @@ botanic_fields = conf_general.loc[conf_general["variable"] == "botanic_fields","
 botanic_field_genus = conf_general.loc[conf_general["variable"] == "botanic_field_genus","value"].values[0]
 botanic_field_taxon = conf_general.loc[conf_general["variable"] == "botanic_field_taxon","value"].values[0]
 botanic_year = conf_general.loc[conf_general["variable"] == "botanic_year","value"].values[0]
-
 fao_varietal_file = conf_general.loc[conf_general["variable"] == "fao_varietal_file","value"].values[0]
 fao_varietal_sheet = conf_general.loc[conf_general["variable"] == "fao_varietal_sheet","value"].values[0]
 fao_varietal_field_genus = conf_general.loc[conf_general["variable"] == "fao_varietal_field_genus","value"].values[0]
 fao_varietal_field_taxon = conf_general.loc[conf_general["variable"] == "fao_varietal_field_taxon","value"].values[0]
 fao_varietal_year_column = conf_general.loc[conf_general["variable"] == "fao_varietal_year_column","value"].values[0]
+ncbi_url = conf_general.loc[conf_general["variable"] == "ncbi_url","value"].values[0]
+ncbi_retmode = conf_general.loc[conf_general["variable"] == "ncbi_retmode","value"].values[0]
+ncbi_databases = str(conf_general.loc[conf_general["variable"] == "ncbi_databases","value"].values[0]).split(',')
+ncbi_year = conf_general.loc[conf_general["variable"] == "ncbi_year","value"].values[0]
 
 all_years = [2015,2016,2017,2018,2019]
 ##############################################
@@ -304,6 +308,16 @@ print("Extracting data")
 fao_varietal.extract_data(os.path.join(inputs_f_downloads,fao_varietal_file),fao_varietal_sheet, inputs_f_raw, 
         crops_genus_list,crops_taxa_list,new_names_list,fao_varietal_field_genus,fao_varietal_field_taxon,fields=None,
         add_value=True,column_year=fao_varietal_year_column)
+
+##############################################
+# 17 - Processing NCBI
+##############################################
+print("17 - Processing NCBI")
+
+print("Downloading data")
+ncbi_cli = NCBI(url=ncbi_url,retmode=ncbi_retmode)
+print("Getting wikipedia views data")
+ncbi_cli.download_data(inputs_f_raw,crops_taxa_list,ncbi_databases, ncbi_year)
 
 """
 ##############################################
