@@ -618,6 +618,7 @@ def summarize_data(location,path,years,step="12",encoding="ISO-8859-1",force=Fal
             df.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)
         else:
             print("\tNot processed: " + full_name)
+    return final_path
 
 # Method that creates a final file with data for interdependence through the years
 # (string) location: String with the path of where the system should take the files.
@@ -633,8 +634,6 @@ def extracting_interdependence(location,path,years,step="13",encoding="ISO-8859-
     final_path = os.path.join(path,"fao",step)
     create_review_folders(final_path,er=False,sm=False)
     # Get files to process
-    print("Hola")
-    print(location)
     files = glob.glob(os.path.join(location,'SM',"*.csv"))    
     print(files)
     # Loop for all faostat files which where downloaded
@@ -653,6 +652,45 @@ def extracting_interdependence(location,path,years,step="13",encoding="ISO-8859-
             df = df[["crop","Element"] + current_cols]
             df.columns = ["crop","Element"]+ new_cols
 
+            # Saving outputs
+            print("\tSaving output")
+            df.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)
+        else:
+            print("\tNot processed: " + full_name)
+    return final_path
+    
+# Method that calculates slope through the years
+# (string) location: String with the path of where the system should take the files.
+#                   It will filter all csv files from the path.
+#                   It just will process the OK files
+# (string) path: Location where the files should be saved
+# (int[]) years: Array of ints with the years which will be sum
+# (string) step: prefix of the output files. By default it is 12
+# (string) encoding: Encoding files. By default it is ISO-8859-1
+# (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+#               By default it is False
+def calculate_slope(location,path,years,step="14",encoding="ISO-8859-1",force=False):
+    final_path = os.path.join(path,"fao",step)
+    create_review_folders(final_path,er=False,sm=False)
+    # Get files to process
+    files = glob.glob(os.path.join(location,'OK',"*.csv"))
+    y1 = min(years)
+    y2 = max(years)
+    y = y2-y1
+    # Loop for all faostat files which where downloaded
+    for full_name in files:
+        f_name = full_name.rsplit(os.path.sep, 1)[-1]
+        f_name = os.path.splitext(f_name)[0]
+        # It checks if files should be force to process again or if the path exist
+        if force or not os.path.exists(os.path.join(final_path,"OK",f_name + ".csv")):
+            # Getting from source
+            print("\tWorking with: " + full_name)
+            df = pd.read_csv(full_name, encoding = encoding)
+            df["slope"] = y / (df["Y" + str(y2)]-df["Y" + str(y1)])
+            # selecting columns
+            df = df[["crop","Element","slope"]]
+            df.columns = ["crop","Element", "Y" + str(y2)]
+            df.replace([np.inf, -np.inf], np.nan, inplace=True)
             # Saving outputs
             print("\tSaving output")
             df.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)

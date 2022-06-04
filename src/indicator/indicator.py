@@ -69,7 +69,7 @@ class Indicator(object):
                         print("\t\t\tProcessing",y,row["prefix_year"],y_name_real,y_name_final)
                         # Check if the file contains values for this year
                         df_tmp[y_name_final] = df_element[y_name_real] if y_name_real in df_element.columns else np.nan
-                    
+
                     all_years = ["Y" + str(y) for y in years]
                     # Calculate average
                     df_tmp["average"] = df_tmp[all_years].mean(axis=1,skipna=True)
@@ -81,20 +81,21 @@ class Indicator(object):
                 else:
                     df_err = df_err.append({"domain":row["domain"],"component":row["component"],"group":row["group"],"metric":row["metric"],"prefix_year":row["prefix_year"]},ignore_index=True)
                     print("\t\tNot processed: ",row["domain"],row["component"],row["group"],row["metric"],row["prefix_year"])
-            
+
             #  Saving output
             df.to_csv(final_file, index = False, encoding = self.encoding)
             df_err.to_csv(err_file, index = False, encoding = self.encoding)
         else:
             print("\tNot processed: " + final_file)
-    
 
-    # Method that checks that fixes all data from raw sources.
+
+    # Method that calculate indicator, further it checks that fixes all data from raw sources.
     # Some actions are check if crops are correct
+    # (dataframe) conf_indicator: Configuration for all metrics
     # (string) step: prefix of the output files. By default it is 01
     # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
     #               By default it is False
-    def check_data(self, crops, new_names, step="02",force=True):
+    def calculate_indicator(self, crops, new_names, conf_indicator, step="02",force=True):
         final_path = os.path.join(self.output_folder,step)
         mf.create_review_folders(final_path,sm=False)
         final_file = os.path.join(final_path,"OK",self.outputs_name + ".csv")
@@ -105,15 +106,35 @@ class Indicator(object):
             # Create global dataframe
             df = pd.read_csv(os.path.join(self.output_folder,"01","OK",self.outputs_name + ".csv"), encoding = self.encoding)
             df_not_ready = df.loc[~df["crop"].isin(crops["crop"]) ,:]
-            
+
             # Updating names
-            df = pd.merge(df,new_names,how='left',left_on="crop", right_on="old")            
+            df = pd.merge(df,new_names,how='left',left_on="crop", right_on="old")
             df.loc[~df["new"].isna(),"crop"] = df.loc[~df["new"].isna(),:]["new"]
             df.drop(["new","old"],axis=1,inplace=True)
             # Checking changes
             df_not_updated = df.loc[~df["crop"].isin(crops["crop"]) ,:]
 
-            # Save outputs    
+            # Remove records with NA's
+            df = df[df['average'].notna()]
+
+            # Calculate indicators
+            # Loop for each configuration, it means foreach metrics
+            df["indicator"] = np.nan
+            print("\tCalculating indicator")
+            for index, row in conf_indicator.iterrows():
+                print("\t\tIndicator",row["domain"],row["component"],row["group"],row["metric"],row["indicator_method"])
+                # Filter records
+                rows_selected = (df["domain"] == row["domain"]) & (df["component"] == row["component"]) & (df["group"] == row["group"]) &  (df["metric"] == row["metric"])
+                if not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "across_crops":
+                    value = df.loc[rows_selected,"average"].sum()
+                    df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"] / value
+                elif not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "by_value":
+                    value = row["indicator_value"]
+                    df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"] / value
+                else:
+                    df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"]
+
+            # Save outputs
             df.to_csv(final_file, index = False, encoding = self.encoding)
             df_not_ready.to_csv(err_file_not_ready, index = False, encoding = self.encoding)
             df_not_updated.to_csv(err_file_not_updated, index = False, encoding = self.encoding)
@@ -134,7 +155,7 @@ class Indicator(object):
             # Create global dataframe
             df = pd.read_csv(os.path.join(self.output_folder,"02","OK",self.outputs_name + ".csv"), encoding = self.encoding)
             df["var"] = df["domain"] + "-" + df["component"] + "-" + df["group"] + "-" + df["metric"]
-            df = df.pivot_table(index=["crop"], columns=["var"], values="average", aggfunc=np.sum)
+            df = df.pivot_table(index=["crop"], columns=["var"], values="indicator", aggfunc=np.sum)
             df.reset_index(level=["crop"], inplace=True)
             df.to_csv(final_file, index = False, encoding = self.encoding)
             print("\t\tOutputs saved.")

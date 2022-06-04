@@ -127,7 +127,7 @@ ncbi_retmode = conf_general.loc[conf_general["variable"] == "ncbi_retmode","valu
 ncbi_databases = str(conf_general.loc[conf_general["variable"] == "ncbi_databases","value"].values[0]).split(',')
 ncbi_year = conf_general.loc[conf_general["variable"] == "ncbi_year","value"].values[0]
 
-all_years = [2015,2016,2017,2018,2019]
+all_years = [2015,2016,2017,2018,2019,2022]
 ##############################################
 # 03 - Downloading data from sources
 ##############################################
@@ -178,9 +178,13 @@ fao_out_inter = fao.calculate_interdependence(crops_xls,os.path.join(inputs_f_ra
 print("Calculating gini")
 fao.calculate_gini(countries_xls, os.path.join(inputs_f_raw,"fao","10"),inputs_f_raw, fao_years)
 print("Summarizing data for crops through countries")
-fao.summarize_data(os.path.join(inputs_f_raw,"fao","06"), inputs_f_raw, fao_years, encoding=fao_encoding)
+fao_out_summary = fao.summarize_data(os.path.join(inputs_f_raw,"fao","06"), inputs_f_raw, fao_years, encoding=fao_encoding)
 print("Summarizing data for crops through countries")
-fao.extracting_interdependence(fao_out_inter, inputs_f_raw, fao_years, encoding=fao_encoding)
+fao_out_interdependence = fao.extracting_interdependence(fao_out_inter, inputs_f_raw, fao_years, encoding=fao_encoding)
+print("Calculating slope summary")
+fao.calculate_slope(fao_out_summary, inputs_f_raw, fao_years, step="14")
+print("Calculating slope interdependence")
+fao.calculate_slope(fao_out_interdependence, inputs_f_raw, fao_years, step="15")
 
 ##############################################
 # 05 - Processing Google downloaded data
@@ -319,18 +323,17 @@ ncbi_cli = NCBI(url=ncbi_url,retmode=ncbi_retmode)
 print("Getting wikipedia views data")
 ncbi_cli.download_data(inputs_f_raw,crops_taxa_list,ncbi_databases, ncbi_year)
 
-"""
+
 ##############################################
-# 13 - Indicator
+# 18 - Indicator
 ##############################################
-print("13 - Indicator")
+print("18 - Indicator")
 
 indicator = Indicator(inputs_f_indicator)
 
 print("Creating raw file combined")
 indicator.extract_raw_data(inputs_f_raw,conf_indicator,all_years)
 print("Checking crop names and others")
-indicator.check_data(crops_list,new_names_list)
+indicator.calculate_indicator(crops_list,new_names_list,conf_indicator)
 print("Arranging format")
 indicator.arrange_format()
-"""
