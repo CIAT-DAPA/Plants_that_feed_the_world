@@ -674,9 +674,9 @@ def calculate_slope(location,path,years,step="14",encoding="ISO-8859-1",force=Fa
     create_review_folders(final_path,er=False,sm=False)
     # Get files to process
     files = glob.glob(os.path.join(location,'OK',"*.csv"))
-    y1 = min(years)
-    y2 = max(years)
-    y = y2-y1
+    x1 = min(years)
+    x2 = max(years)
+    x = x2-x1
     # Loop for all faostat files which where downloaded
     for full_name in files:
         f_name = full_name.rsplit(os.path.sep, 1)[-1]
@@ -686,10 +686,10 @@ def calculate_slope(location,path,years,step="14",encoding="ISO-8859-1",force=Fa
             # Getting from source
             print("\tWorking with: " + full_name)
             df = pd.read_csv(full_name, encoding = encoding)
-            df["slope"] = y / (df["Y" + str(y2)]-df["Y" + str(y1)])
+            df["slope"] = (df["Y" + str(x2)]-df["Y" + str(x1)]) / x
             # selecting columns
             df = df[["crop","Element","slope"]]
-            df.columns = ["crop","Element", "Y" + str(y2)]
+            df.columns = ["crop","Element", "Y" + str(x2)]
             df.replace([np.inf, -np.inf], np.nan, inplace=True)
             # Saving outputs
             print("\tSaving output")
