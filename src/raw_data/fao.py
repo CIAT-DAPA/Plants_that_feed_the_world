@@ -686,7 +686,7 @@ def calculate_slope(location,path,years,step="14",encoding="ISO-8859-1",force=Fa
             # Getting from source
             print("\tWorking with: " + full_name)
             df = pd.read_csv(full_name, encoding = encoding)
-            df["slope"] = (df["Y" + str(x2)]-df["Y" + str(x1)]) / x
+            df["slope"] = (df["Y" + str(x2)]-df["Y" + str(x1)]) / df["Y" + str(x1)]
             # selecting columns
             df = df[["crop","Element","slope"]]
             df.columns = ["crop","Element", "Y" + str(x2)]

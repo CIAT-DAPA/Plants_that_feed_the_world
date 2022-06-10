@@ -125,12 +125,20 @@ class Indicator(object):
                 print("\t\tIndicator",row["domain"],row["component"],row["group"],row["metric"],row["indicator_method"])
                 # Filter records
                 rows_selected = (df["domain"] == row["domain"]) & (df["component"] == row["component"]) & (df["group"] == row["group"]) &  (df["metric"] == row["metric"])
+                # This method sum all records of the metric and divide each crop by the total
                 if not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "across_crops":
                     value = df.loc[rows_selected,"average"].sum()
                     df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"] / value
+                # This method divide value by setted value
                 elif not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "by_value":
                     value = row["indicator_value"]
                     df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"] / value
+                # This method sum all records of the metric and divide each crop by the total
+                elif not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "element_per_crop":
+                    metric = row["indicator_value"].split(",")
+                    rows_selected2 = (df["domain"] == metric[0]) & (df["component"] == metric[1]) & (df["group"] == metric[2]) &  (df["metric"] == metric[3])
+                    df_denominator = df.loc[rows_selected2,:]
+                    df.loc[rows_selected,"indicator"]= df.loc[rows_selected,:].apply(lambda x: self.element_per_crop(x["crop"],x["average"],df_denominator), axis=1)
                 else:
                     df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"]
 
@@ -141,6 +149,22 @@ class Indicator(object):
             print("\t\tOutputs saved.")
         else:
             print("\tNot processed: " + final_file)
+    
+    # Method which calculates the indicator with the methodology element per crop
+    # It search the value for each crop in other source and divide the current value with
+    # the found.
+    # (string) crop: Crop name
+    # (double) value: Crop's value
+    # (dataframe) source: Dataframe with the values' list for denominator
+    # return value of indicator for the crop
+    def element_per_crop(self,crop,value,source):
+        answer = np.nan
+        denominator = source.loc[source["crop"] == crop,"average"]
+        if len(denominator.values) > 0:
+            answer = value / denominator.values[0]
+            answer = 1 if answer > 1 else answer
+        return answer
+
 
     # Method that checks that fixes all data from raw sources.
     # (string) step: prefix of the output files. By default it is 01
