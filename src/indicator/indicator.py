@@ -15,7 +15,6 @@ class Indicator(object):
     outputs_name=''
     encoding=''
 
-    
 
     # Method construct
     def __init__(self,output_folder,outputs_name='indicator',encoding="ISO-8859-1"):
@@ -117,30 +116,7 @@ class Indicator(object):
             # Remove records with NA's
             df = df[df['average'].notna()]
 
-            # Calculate indicators
-            # Loop for each configuration, it means foreach metrics
-            df["indicator"] = np.nan
-            print("\tCalculating indicator")
-            for index, row in conf_indicator.iterrows():
-                print("\t\tIndicator",row["domain"],row["component"],row["group"],row["metric"],row["indicator_method"])
-                # Filter records
-                rows_selected = (df["domain"] == row["domain"]) & (df["component"] == row["component"]) & (df["group"] == row["group"]) &  (df["metric"] == row["metric"])
-                # This method sum all records of the metric and divide each crop by the total
-                if not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "across_crops":
-                    value = df.loc[rows_selected,"average"].sum()
-                    df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"] / value
-                # This method divide value by setted value
-                elif not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "by_value":
-                    value = row["indicator_value"]
-                    df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"] / value
-                # This method sum all records of the metric and divide each crop by the total
-                elif not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "element_per_crop":
-                    metric = row["indicator_value"].split(",")
-                    rows_selected2 = (df["domain"] == metric[0]) & (df["component"] == metric[1]) & (df["group"] == metric[2]) &  (df["metric"] == metric[3])
-                    df_denominator = df.loc[rows_selected2,:]
-                    df.loc[rows_selected,"indicator"]= df.loc[rows_selected,:].apply(lambda x: self.element_per_crop(x["crop"],x["average"],df_denominator), axis=1)
-                else:
-                    df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"]
+            df = self.create_indicator(df,conf_indicator)
 
             # Save outputs
             df.to_csv(final_file, index = False, encoding = self.encoding)
@@ -149,7 +125,52 @@ class Indicator(object):
             print("\t\tOutputs saved.")
         else:
             print("\tNot processed: " + final_file)
+        return final_file
     
+    # Method that creates indicator base on average
+    # (dataframe) df_values: Dataframe with indicator values
+    # (dataframe) conf_indicator: Dataframe with configuration to calculate indicators
+    # return dataframe with indicators calculate
+    def create_indicator(self,df_values, conf_indicator):
+        df = df_values
+        # Remove records with NA's
+        df = df[df['average'].notna()]
+
+        # Calculate indicators
+        # Loop for each configuration, it means foreach metrics
+        df["indicator"] = np.nan
+        df["normalized"] = np.nan
+        print("\tCalculating indicator")
+        for index, row in conf_indicator.iterrows():
+            print("\t\tIndicator",row["domain"],row["component"],row["group"],row["metric"],row["indicator_method"])
+            # Filter records
+            rows_selected = (df["domain"] == row["domain"]) & (df["component"] == row["component"]) & (df["group"] == row["group"]) &  (df["metric"] == row["metric"])
+            # This method sum all records of the metric and divide each crop by the total
+            if not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "across_crops":
+                value = df.loc[rows_selected,"average"].sum()
+                df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"] / value
+            # This method divide value by setted value
+            elif not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "by_value":
+                value = row["indicator_value"]
+                df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"] / value
+            # This method sum all records of the metric and divide each crop by the total
+            elif not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "element_per_crop":
+                metric = row["indicator_value"].split(",")
+                rows_selected2 = (df["domain"] == metric[0]) & (df["component"] == metric[1]) & (df["group"] == metric[2]) &  (df["metric"] == metric[3])
+                df_denominator = df.loc[rows_selected2,:]
+                df.loc[rows_selected,"indicator"]= df.loc[rows_selected,:].apply(lambda x: self.element_per_crop(x["crop"],x["average"],df_denominator), axis=1)
+            # This method checks that value of indicator does not exceed the limit
+            elif not pd.isnull(row["indicator_method"]) and row["indicator_method"] == "limit":
+                value = row["indicator_value"]
+                df.loc[rows_selected,"indicator"]= df.loc[rows_selected,:].apply(lambda x: self.limit(x["average"],value), axis=1)
+            else:
+                df.loc[rows_selected,"indicator"]= df.loc[rows_selected,"average"]
+            # Normalization
+            max = df.loc[rows_selected,"indicator"].max()
+            min = df.loc[rows_selected,"indicator"].min()
+            df.loc[rows_selected,"normalized"] = (df.loc[rows_selected,"indicator"] - min) / (max-min)
+        return df
+
     # Method which calculates the indicator with the methodology element per crop
     # It search the value for each crop in other source and divide the current value with
     # the found.
@@ -162,26 +183,111 @@ class Indicator(object):
         denominator = source.loc[source["crop"] == crop,"average"]
         if len(denominator.values) > 0:
             answer = value / denominator.values[0]
-            answer = 1 if answer > 1 else answer
+        return answer
+
+    # Method that checks if value is higher than limit
+    # if value is higher, it sets the limit value, otherwhise it just return the current value
+    # (float) value: Value to check
+    # (float) limit: Limit for the indicator
+    def limit(self,value,limit):
+        answer = limit if float(value) > float(limit) else value
         return answer
 
 
     # Method that checks that fixes all data from raw sources.
+    # (string[]) metrics: array of metrics that want to export
     # (string) step: prefix of the output files. By default it is 01
     # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
     #               By default it is False
-    def arrange_format(self,  step="03",force=True):
+    def arrange_format(self, metrics=["average","indicator","normalized"], step="03",force=True):
         final_path = os.path.join(self.output_folder,step)
         mf.create_review_folders(final_path,er=False,sm=False)
+        final_path = os.path.join(final_path,'OK')
+        files = glob.glob(os.path.join(final_path,"*.csv"))
+        # Validating if final file exist
+        if force or len(files) == 0: #not os.path.exists(final_file):
+            # Create global dataframe
+            df = pd.read_csv(os.path.join(self.output_folder,"02","OK",self.outputs_name + ".csv"), encoding = self.encoding)
+            self.format_df_indicator(df,metrics,final_path)
+        else:
+            print("\tNot processed: " + final_path)
+        return final_path
+
+    # Method that generates outputs for indicator
+    def format_df_indicator(self,df, metrics, final_path):
+        df["var"] = df["domain"] + "-" + df["component"] + "-" + df["group"] + "-" + df["metric"]
+        df["idx_group"] = df["domain"] + "-" + df["component"] + "-" + df["group"]
+        df["idx_component"] = df["domain"] + "-" + df["component"]
+
+        for m in metrics:
+            df_m = df.pivot_table(index=["crop"], columns=["var"], values=m, aggfunc=np.sum)
+            df_m.reset_index(level=["crop"], inplace=True)
+
+            # Calculate mean by group
+            print("\t\t\tCalculating mean by group")
+            idx_g = df["idx_group"].drop_duplicates()
+            for index, value in idx_g.items():
+                print("\t\t\t\t",value)
+                cols =  [col for col in df_m if col.startswith(value)]
+                df_m["idx-group-" + value] = df_m[cols].mean(axis=1)
+
+            # Calculate mean by group
+            print("\t\t\tCalculating mean by component")
+            idx_c = df["idx_component"].drop_duplicates()
+            for index, value in idx_c.items():
+                print("\t\t\t\t",value)
+                cols =  [col for col in df_m if col.startswith("idx-group-" + value)]
+                df_m["idx-component-" +value] = df_m[cols].mean(axis=1)
+                
+            # Calculate mean by group
+            print("\t\t\tCalculating mean by domain")
+            idx_d = df["domain"].drop_duplicates()
+            for index, value in idx_d.items():
+                print("\t\t\t\t",value)
+                cols =  [col for col in df_m if col.startswith("idx-component-" + value)]
+                df_m["idx-domain-" +value] = df_m[cols].mean(axis=1)
+                
+            # Calculate mean by group
+            print("\t\t\tCalculating mean by crop")
+            cols =  [col for col in df_m if col.startswith("idx-domain")]
+            df_m["idx-crop"] = df_m[cols].mean(axis=1)
+                
+            final_file = os.path.join(final_path,self.outputs_name + "_" + m + ".csv")
+            df_m.to_csv(final_file, index = False, encoding = self.encoding)
+        print("\t\tOutputs saved.")
+
+    # Method that calculates indicator by groups
+    # (string) location: path of input file
+    # (string[]) metrics: array of metrics that want to export
+    # (string) step: prefix of the output files. By default it is 04
+    # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+    #               By default it is False
+    def calculate_indicator_by_use(self, new_names, conf_indicator, df_groups, metrics=["average","indicator","normalized"], step="04",force=True):
+        final_path = os.path.join(self.output_folder,step)
+        mf.create_review_folders(final_path,sm=False)
+        final_path = os.path.join(final_path,"OK")
         final_file = os.path.join(final_path,"OK",self.outputs_name + ".csv")
         # Validating if final file exist
         if force or not os.path.exists(final_file):
-            # Create global dataframe
-            df = pd.read_csv(os.path.join(self.output_folder,"02","OK",self.outputs_name + ".csv"), encoding = self.encoding)
-            df["var"] = df["domain"] + "-" + df["component"] + "-" + df["group"] + "-" + df["metric"]
-            df = df.pivot_table(index=["crop"], columns=["var"], values="indicator", aggfunc=np.sum)
-            df.reset_index(level=["crop"], inplace=True)
-            df.to_csv(final_file, index = False, encoding = self.encoding)
-            print("\t\tOutputs saved.")
+            groups = df_groups["group"].drop_duplicates()
+            for idx,value in groups.items():
+                # Create global dataframe
+                df = pd.read_csv(os.path.join(self.output_folder,"01","OK",self.outputs_name + ".csv"), encoding = self.encoding)
+                # Filtering for group
+                crop_list = df_groups.loc[df_groups["group"]==value,"crop"].drop_duplicates()
+                df = df.loc[df["crop"].isin(crop_list),:]
+                # Updating names
+                df = pd.merge(df,new_names,how='left',left_on="crop", right_on="old")
+                df.loc[~df["new"].isna(),"crop"] = df.loc[~df["new"].isna(),:]["new"]
+                df.drop(["new","old"],axis=1,inplace=True)
+                
+                # Remove records with NA's
+                df = df[df['average'].notna()]
+
+                df = self.create_indicator(df,conf_indicator)
+                tmp_path = os.path.join(final_path,value)
+                mf.mkdir(tmp_path)
+                self.format_df_indicator(df,metrics,tmp_path)
         else:
             print("\tNot processed: " + final_file)
+        return final_file
