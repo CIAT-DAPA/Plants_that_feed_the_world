@@ -333,7 +333,7 @@ print("18 - Indicator")
 indicator = Indicator(inputs_f_indicator)
 
 print("Creating raw file combined")
-indicator.extract_raw_data(inputs_f_raw,conf_indicator,all_years)
+indicator.extract_raw_data(inputs_f_raw,conf_indicator,all_years,crops_list)
 print("Checking crop names and others")
 path_indicator = indicator.calculate_indicator(crops_list,new_names_list,conf_indicator)
 print("Arranging format")

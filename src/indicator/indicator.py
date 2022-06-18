@@ -30,7 +30,7 @@ class Indicator(object):
     # (string) step: prefix of the output files. By default it is 01
     # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
     #               By default it is False
-    def extract_raw_data(self, folder_raw, conf_indicator, years,step="01",force=False):
+    def extract_raw_data(self, folder_raw, conf_indicator, years, crops_list,step="01",force=False):
         final_path = os.path.join(self.output_folder,step)
         mf.create_review_folders(final_path,sm=False)
         final_file = os.path.join(final_path,"OK",self.outputs_name + ".csv")
@@ -70,8 +70,18 @@ class Indicator(object):
                         df_tmp[y_name_final] = df_element[y_name_real] if y_name_real in df_element.columns else np.nan
 
                     all_years = ["Y" + str(y) for y in years]
+                    # Calculate filling crops just for specific domain
+                    if row["domain"] != "crop_use" and row["domain"] != "interdependence":
+                        df_crops = crops_list["crop"]
+                        df_tmp = pd.merge(df_crops,df_tmp,how="left",on=["crop"])
+                        df_tmp["domain"] = df_tmp["domain"].fillna(row["domain"])
+                        df_tmp["component"] = df_tmp["component"].fillna(row["component"])
+                        df_tmp["group"] = df_tmp["group"].fillna(row["group"])
+                        df_tmp["metric"] = df_tmp["metric"].fillna(row["metric"])
                     # Calculate average
                     df_tmp["average"] = df_tmp[all_years].mean(axis=1,skipna=True)
+                    if row["domain"] != "crop_use" and row["domain"] != "interdependence":
+                        df_tmp["average"] = df_tmp["average"].fillna(0)
                     if df.shape[0] > 0:
                         df = df.append(df_tmp,ignore_index=True)
                     else:
@@ -168,7 +178,10 @@ class Indicator(object):
             # Normalization
             max = df.loc[rows_selected,"indicator"].max()
             min = df.loc[rows_selected,"indicator"].min()
-            df.loc[rows_selected,"normalized"] = (df.loc[rows_selected,"indicator"] - min) / (max-min)
+            if min != max:
+                df.loc[rows_selected,"normalized"] = (df.loc[rows_selected,"indicator"] - min) / (max-min)
+            else:
+                df.loc[rows_selected,"normalized"] = 1
         return df
 
     # Method which calculates the indicator with the methodology element per crop
