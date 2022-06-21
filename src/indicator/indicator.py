@@ -196,6 +196,7 @@ class Indicator(object):
         denominator = source.loc[source["crop"] == crop,"average"]
         if len(denominator.values) > 0:
             answer = value / denominator.values[0]
+            #print(crop, value, denominator.values[0],answer)
         return answer
 
     # Method that checks if value is higher than limit
