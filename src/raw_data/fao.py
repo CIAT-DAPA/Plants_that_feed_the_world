@@ -408,7 +408,7 @@ def calculate_contribution_crop_country(location,path,years,step="07",encoding="
 # (string) encoding: Encoding files. By default it is ISO-8859-1
 # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
 #               By default it is False
-def count_countries(location,path,years,limit=0.95,suffix="_cumsum",step="08",encoding="ISO-8859-1",force=False):        
+def count_countries(location,path,years,limit=0.95,suffix="_cumsum",step="08",encoding="ISO-8859-1",force=False):
     final_path = os.path.join(path,"fao",step)
     create_review_folders(final_path,er=False,sm=False)
     # Get files to process
@@ -418,11 +418,21 @@ def count_countries(location,path,years,limit=0.95,suffix="_cumsum",step="08",en
         f_name = full_name.rsplit(os.path.sep, 1)[-1]
         f_name = os.path.splitext(f_name)[0]
         # It checks if files should be force to process again or if the path exist
-        if force or not os.path.exists(os.path.join(final_path,"OK",f_name + ".csv")):            
+        if force or not os.path.exists(os.path.join(final_path,"OK",f_name + ".csv")):
             print("\tWorking with: " + full_name)
             df = pd.read_csv(full_name, encoding = encoding)
+            # Creating a list of crops and elements, because all records should have values,
+            # even they are not into the limit. those data will be filled with zeros
+            df_c = df[["crop"]].drop_duplicates()
+            df_e = df[["Element"]].drop_duplicates()
+            df_c["tmp"] = 1
+            df_e["tmp"] = 1
+            df_crops = pd.merge(df_c,df_e, on=['tmp'])
+            df_crops = df_crops.drop('tmp', axis=1)
+            print(df_crops.loc[df_crops["crop"]=="Arracacha",:])
+
             # Getting a list of all crops into a dataframe
-            df_crops = df[["crop","Element"]].drop_duplicates()            
+            #df_crops = df[["crop","Element"]].drop_duplicates()
             for y in years:
                 print("\t\tCounting ",y)
                 y_year = "Y" + str(y) + suffix
@@ -430,9 +440,9 @@ def count_countries(location,path,years,limit=0.95,suffix="_cumsum",step="08",en
                 df_tmp = df_tmp.dropna()
                 df_tmp = df_tmp.groupby(["crop","Element"]).size().reset_index(name=str(y))
                 df_crops = pd.merge(df_crops,df_tmp,how='left',on=["crop","Element"])
-            
+
             print("\tSaving output")
-            df_crops = df_crops.dropna(thresh=4)
+            #df_crops = df_crops.dropna(thresh=4)
             df_crops = df_crops.fillna(0)
             df_crops.to_csv(os.path.join(final_path,"OK",f_name + ".csv"), index = False, encoding = encoding)
         else:
