@@ -19,7 +19,9 @@ RUN apt-get update \
         wget \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --upgrade pip \
-    && pip install -r ${DEPENDENCIES}/requirements.txt
+    && pip install -r ${DEPENDENCIES}/requirements.txt \ 
+    && cd ~/ \
+    && git clone https://github.com/CIAT-DAPA/itpgrfa_crop_indicator_code.git
 
 # docker build -t stevensotelo/itpgrfa_indicator:latest .
 # docker tag xx stevensotelo/itpgrfa_indicator:latest
