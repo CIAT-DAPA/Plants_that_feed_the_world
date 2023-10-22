@@ -306,6 +306,18 @@ class Indicator(object):
             print("\tNot processed: " + final_file)
         return final_file
     
+    def set_level(self,indicator):
+        level = "metric"
+        if indicator.startswith("idx-domain"):
+            level = "domain"
+        elif indicator.startswith("idx-component"):
+            level = "component"
+        elif indicator.startswith("idx-group"):
+            level = "group"
+        elif indicator.startswith("idx-cro"):
+            level = "crop"
+        return level
+    
     # Method that joins all 
     # (string) location: path of input file
     # (string[]) metrics: array of metrics that want to export
@@ -331,7 +343,7 @@ class Indicator(object):
                     value_vars = set(df.columns) - set(['crop'])
                     df = pd.melt(df, id_vars=['crop'], value_vars=value_vars, var_name='indicator', value_name='value')
                     df["metric"] = metric
-                    print(use_f,os.path.pathsep,use_f.split(os.path.pathsep)[-1])
+                    df["level"] = df.apply(lambda x: self.set_level(x["indicator"]), axis=1)
                     df["use"] = use_f.split("/")[-1]
                     df_all = pd.concat([df_all,df], ignore_index=True)
             df_all.to_csv(final_file, index = False, encoding = self.encoding)
