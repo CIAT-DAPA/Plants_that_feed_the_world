@@ -104,7 +104,7 @@ class Indicator(object):
     # (string) step: prefix of the output files. By default it is 01
     # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
     #               By default it is False
-    def calculate_indicator(self, crops, new_names, conf_indicator, step="02",force=True):
+    def calculate_indicator(self, crops, new_names, conf_indicator, step="02",force=False):
         final_path = os.path.join(self.output_folder,step)
         mf.create_review_folders(final_path,sm=False)
         final_file = os.path.join(final_path,"OK",self.outputs_name + ".csv")
@@ -276,7 +276,7 @@ class Indicator(object):
     # (string) step: prefix of the output files. By default it is 04
     # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
     #               By default it is False
-    def calculate_indicator_by_use(self, new_names, conf_indicator, df_groups, metrics=["average","indicator","normalized"], step="04",force=True):
+    def calculate_indicator_by_use(self, new_names, conf_indicator, df_groups, metrics=["average","indicator","normalized"], step="04",force=False):
         final_path = os.path.join(self.output_folder,step)
         mf.create_review_folders(final_path,sm=False)
         final_path = os.path.join(final_path,"OK")
@@ -302,6 +302,39 @@ class Indicator(object):
                 tmp_path = os.path.join(final_path,value)
                 mf.mkdir(tmp_path)
                 self.format_df_indicator(df,metrics,tmp_path)
+        else:
+            print("\tNot processed: " + final_file)
+        return final_file
+    
+    # Method that joins all 
+    # (string) location: path of input file
+    # (string[]) metrics: array of metrics that want to export
+    # (string) step: prefix of the output files. By default it is 04
+    # (bool) force: Set if the process have to for the execution of all files even if the were processed before. 
+    #               By default it is False
+    def prepare_tableau(self, metrics=["average","indicator","normalized"], step="05",force=False):
+        source_path = os.path.join(self.output_folder,"04","OK")
+        final_path = os.path.join(self.output_folder,step)
+        mf.create_review_folders(final_path,sm=False)
+        final_path = os.path.join(final_path,"OK")
+        final_file = os.path.join(final_path,self.outputs_name + ".csv")
+        # Validating if final file exist
+        if force or not os.path.exists(final_file):
+            uses_folders = glob.glob(os.path.join(source_path,"*"))
+            df_all = pd.DataFrame()
+            for use_f in uses_folders:
+                print("\tProcessing use:",use_f)
+                for metric in metrics:
+                    file = os.path.join(use_f,"indicator_" + metric + ".csv")
+                    print("\t\tLoading:",file)
+                    df = pd.read_csv(file, encoding = self.encoding)
+                    value_vars = set(df.columns) - set(['crop'])
+                    df = pd.melt(df, id_vars=['crop'], value_vars=value_vars, var_name='indicator', value_name='value')
+                    df["metric"] = metric
+                    print(use_f,os.path.pathsep,use_f.split(os.path.pathsep)[-1])
+                    df["use"] = use_f.split("/")[-1]
+                    df_all = pd.concat([df_all,df], ignore_index=True)
+            df_all.to_csv(final_file, index = False, encoding = self.encoding)
         else:
             print("\tNot processed: " + final_file)
         return final_file
