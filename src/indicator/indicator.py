@@ -306,15 +306,16 @@ class Indicator(object):
             print("\tNot processed: " + final_file)
         return final_file
     
-    def set_level(self,indicator):
+    # Method that analyze the indicator name ans et the level and hierachy
+    def set_level(self,row):
         level = "metric"
-        if indicator.startswith("idx-domain"):
+        if row["indicator"].startswith("idx-domain"):
             level = "domain"
-        elif indicator.startswith("idx-component"):
+        elif row["indicator"].startswith("idx-component"):
             level = "component"
-        elif indicator.startswith("idx-group"):
+        elif row["indicator"].startswith("idx-group"):
             level = "group"
-        elif indicator.startswith("idx-cro"):
+        elif row["indicator"].startswith("idx-cro"):
             level = "crop"
         return level
     
@@ -343,7 +344,7 @@ class Indicator(object):
                     value_vars = set(df.columns) - set(['crop'])
                     df = pd.melt(df, id_vars=['crop'], value_vars=value_vars, var_name='indicator', value_name='value')
                     df["metric"] = metric
-                    df["level"] = df.apply(lambda x: self.set_level(x["indicator"]), axis=1)
+                    df["level"] = df.apply(lambda x: self.set_level(x), axis=1)
                     df["use"] = use_f.split("/")[-1]
                     df_all = pd.concat([df_all,df], ignore_index=True)
             df_all.to_csv(final_file, index = False, encoding = self.encoding)
